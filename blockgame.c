@@ -57,6 +57,12 @@ ISR(TIMER0_COMPA_vect) {
     animate = 1;
 }
 
+// get the LCD setup at boot
+void boot_lcd() {
+    lcd_init();
+    lcd_home();
+}
+
 // initialize the board
 void boot_board(char board[3][10]) {
     int c;
@@ -168,11 +174,7 @@ int main() {
     char board[3][10];
     boot_board(board);
 
-    // get the LCD setup at boot -- must be done in main?!
-    // -- or was that an issue with opening the FILE stream?
-    lcd_init();
-    lcd_home();
-
+    boot_lcd();
     boot_pins();
     boot_timer();
 
