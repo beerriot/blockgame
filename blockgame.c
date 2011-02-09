@@ -184,7 +184,6 @@ int main() {
         if(buttons_pushed) {
             move_cursor(&row, &column);
             do_select(board, row, column);
-            animate = 1;
             buttons_pushed = 0;
         }
         
