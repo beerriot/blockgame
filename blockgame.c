@@ -48,6 +48,9 @@ struct blink_state {
 struct point {
     int8_t row;
     int8_t column;
+    // extra data about this point
+    // (used for "activeness" of selection)
+    int8_t meta;
 };
 
 // wheter or not the animate timer has clicked
@@ -153,17 +156,76 @@ void move_cursor(uint8_t buttons_pushed,
     else if (cursor->column < 0) cursor->column = 9;
 }
 
+uint8_t are_neighbors(struct point p1, struct point p2) {
+    if (p1.row == p2.row) {
+        switch (p1.column - p2.column) {
+        case 1: return 1; // p1 is right of p2
+        case -1: return 1; // p1 is left of p2
+        case -9: return 1; // p1 is on the left, p2 is on the right
+        case 9: return 1; // p1 is on the right, p2 is on the left
+        }
+    } else if (p1.column == p2.column) {
+        lcd_write_data('c');
+        switch (p1.row - p2.row) {
+        case 1: return 1; // p1 is below p2
+        case -1: return 1; // p1 is above p2
+        case -2: return 1; // p1 is on the top, p2 is on the bottom
+        case 2:  return 1; // p1 is on the bottom, p2 is on the top
+        }
+    }
+    return 0;
+}
+
+void invalidate_selection(struct point* selection) {
+    selection->meta = 0;
+}
+
+uint8_t selection_is_active(struct point selection) {
+    return selection.meta != 0;
+}
+
+void clear_selection(char board[3][10], struct point* selection) {
+    if (selection_is_active(*selection))
+        board[selection->row][selection->column] |= 0x20;
+    invalidate_selection(selection);
+}
+
+void set_selection(char board[3][10],
+                   struct point* selection,
+                   struct point cursor) {
+    selection->row = cursor.row;
+    selection->column = cursor.column;
+    selection->meta = 1;
+    board[selection->row][selection->column] &= ~0x20;
+}
+
+void clear_pieces(char board[3][10],
+                  struct point p1,
+                  struct point p2) {
+    // TODO: game logic
+    board[p1.row][p1.column] = 0xA1;
+    board[p2.row][p2.column] = 0xA1;
+}
+
 // handle a select button push
 void do_select(uint8_t buttons_pushed,
                char board[3][10],
-               struct point cursor) {
+               struct point cursor,
+               struct point *selection) {
     if (buttons_pushed & B_SELECT) {
-        if (board[cursor.row][cursor.column] >= 'a')
-            board[cursor.row][cursor.column] =
-                board[cursor.row][cursor.column]-('a'-'A');
-        else
-            board[cursor.row][cursor.column] =
-                board[cursor.row][cursor.column]+('a'-'A');
+        if (selection_is_active(*selection)) {
+            if (are_neighbors(*selection, cursor)) {
+                clear_pieces(board, cursor, *selection);
+                invalidate_selection(selection);
+            } else {
+                clear_selection(board, selection);
+                if (cursor.row != selection->row ||
+                    cursor.column != selection->column)
+                    set_selection(board, selection, cursor);
+            }
+        } else {
+            set_selection(board, selection, cursor);
+        }
     }
 }
 
@@ -230,12 +292,15 @@ int main() {
     uint8_t pressed_buttons;
     // blink state
     struct blink_state blink_state;
+    // selection state
+    struct point selection;
 
     boot_board(board);
     clear_button_state(&button_state);
     clear_blink_state(&blink_state);
     cursor.row = 0;
     cursor.column = 0;
+    invalidate_selection(&selection);
 
     boot_lcd();
     boot_pins();
@@ -250,7 +315,7 @@ int main() {
 
             if(pressed_buttons) {
                 move_cursor(pressed_buttons, &cursor);
-                do_select(pressed_buttons, board, cursor);
+                do_select(pressed_buttons, board, cursor, &selection);
                 write_board(board);
             }
 
