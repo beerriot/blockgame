@@ -36,6 +36,14 @@ struct button_states {
     uint8_t last_read;
 };
 
+// living state for the cursor blinker
+struct blink_state {
+    // the clock counter
+    uint8_t counter;
+    // which blink are we on?
+    uint8_t blink;
+};
+
 // last button state
 volatile uint8_t button_states = 0;
 
@@ -172,6 +180,25 @@ void write_board(char board[3][10]) {
     write_row(board[2]);
 }
 
+void clear_blink_state(struct blink_state* blink_state) {
+    blink_state->counter = 0;
+    blink_state->blink = 0;
+}
+
+void maybe_blink(struct blink_state* blink_state,
+                 char board[3][10],
+                 int row, int column) {
+    // 30 should be a half second, if we run at 60 Hz
+    if (blink_state->counter > 30) {
+        lcd_goto_position(row, column);
+        lcd_write_data(blink_state->blink ? board[row][column] : 0xA5);
+        blink_state->blink = ~blink_state->blink;
+        blink_state->counter = 0;
+    } else {
+        blink_state->counter++;
+    }
+}
+
 void show_button(struct button_states button_state,
                  uint8_t button, char label) {
     lcd_write_data((button_state.stable & button) ? label : ' ');
@@ -197,28 +224,32 @@ int main() {
     struct button_states button_state;
     // latest new presses
     uint8_t pressed_buttons;
+    // blink state
+    struct blink_state blink_state;
 
     boot_board(board);
     clear_button_state(&button_state);
+    clear_blink_state(&blink_state);
 
     boot_lcd();
     boot_pins();
     boot_timer();
 
     sei(); //enable interrupts
-    animate = 1; // draw the board the first time
+    write_board(board);
     while(1) {
         if (animate) {
+            animate = 0;
             pressed_buttons = read_buttons(&button_state);
 
             if(pressed_buttons) {
                 move_cursor(pressed_buttons, &row, &column);
                 do_select(pressed_buttons, board, row, column);
                 buttons_pushed = 0;
+                write_board(board);
             }
-        
-            write_board(board);
-            animate = 0;
+
+            maybe_blink(&blink_state, board, row, column);
 
             show_buttons(button_state); // debug
         }
