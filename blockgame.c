@@ -44,6 +44,12 @@ struct blink_state {
     uint8_t blink;
 };
 
+// generic "point on the board" structure
+struct point {
+    int8_t row;
+    int8_t column;
+};
+
 // wheter or not the animate timer has clicked
 volatile int animate = 0;
 
@@ -129,32 +135,35 @@ uint8_t read_buttons(struct button_states* state) {
 }
 
 // handle any directional button pushes
-void move_cursor(uint8_t buttons_pushed, int* row, int* column) {
+void move_cursor(uint8_t buttons_pushed,
+                 struct point* cursor) {
     if (buttons_pushed & B_UP)
-        (*row)--;
+        cursor->row--;
     if (buttons_pushed & B_DOWN)
-        (*row)++;
+        cursor->row++;
     if (buttons_pushed & B_LEFT)
-        (*column)--;
+        cursor->column--;
     if (buttons_pushed & B_RIGHT)
-        (*column)++;
+        cursor->column++;
 
-    if (*row > 2)      *row = 0;
-    else if (*row < 0) *row = 2;
+    if (cursor->row > 2)      cursor->row = 0;
+    else if (cursor->row < 0) cursor->row = 2;
 
-    if (*column > 9)      *column = 0;
-    else if (*column < 0) *column = 9;
+    if (cursor->column > 9)      cursor->column = 0;
+    else if (cursor->column < 0) cursor->column = 9;
 }
 
 // handle a select button push
 void do_select(uint8_t buttons_pushed,
                char board[3][10],
-               int row, int column) {
+               struct point cursor) {
     if (buttons_pushed & B_SELECT) {
-        if (board[row][column] >= 'a')
-            board[row][column] = board[row][column]-('a'-'A');
+        if (board[cursor.row][cursor.column] >= 'a')
+            board[cursor.row][cursor.column] =
+                board[cursor.row][cursor.column]-('a'-'A');
         else
-            board[row][column] = board[row][column]+('a'-'A');
+            board[cursor.row][cursor.column] =
+                board[cursor.row][cursor.column]+('a'-'A');
     }
 }
 
@@ -181,11 +190,12 @@ void clear_blink_state(struct blink_state* blink_state) {
 
 void maybe_blink(struct blink_state* blink_state,
                  char board[3][10],
-                 int row, int column) {
+                 struct point cursor) {
     // 30 should be a half second, if we run at 60 Hz
     if (blink_state->counter > 30) {
-        lcd_goto_position(row, column);
-        lcd_write_data(blink_state->blink ? board[row][column] : 0xA5);
+        lcd_goto_position(cursor.row, cursor.column);
+        lcd_write_data(blink_state->blink ?
+                       board[cursor.row][cursor.column] : 0xA5);
         blink_state->blink = ~blink_state->blink;
         blink_state->counter = 0;
     } else {
@@ -211,7 +221,7 @@ void show_buttons(struct button_states button_state) {
 int main() {
 
     // row and column of the cursor
-    int row = 0, column = 0;
+    struct point cursor;
     // the playing board
     char board[3][10];
     // read state
@@ -224,6 +234,8 @@ int main() {
     boot_board(board);
     clear_button_state(&button_state);
     clear_blink_state(&blink_state);
+    cursor.row = 0;
+    cursor.column = 0;
 
     boot_lcd();
     boot_pins();
@@ -237,12 +249,12 @@ int main() {
             pressed_buttons = read_buttons(&button_state);
 
             if(pressed_buttons) {
-                move_cursor(pressed_buttons, &row, &column);
-                do_select(pressed_buttons, board, row, column);
+                move_cursor(pressed_buttons, &cursor);
+                do_select(pressed_buttons, board, cursor);
                 write_board(board);
             }
 
-            maybe_blink(&blink_state, board, row, column);
+            maybe_blink(&blink_state, board, cursor);
 
             show_buttons(button_state); // debug
         }
