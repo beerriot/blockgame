@@ -44,12 +44,6 @@ struct blink_state {
     uint8_t blink;
 };
 
-// last button state
-volatile uint8_t button_states = 0;
-
-// what buttons were freshly pushed
-volatile uint8_t buttons_pushed = 0;
-
 // wheter or not the animate timer has clicked
 volatile int animate = 0;
 
@@ -245,7 +239,6 @@ int main() {
             if(pressed_buttons) {
                 move_cursor(pressed_buttons, &row, &column);
                 do_select(pressed_buttons, board, row, column);
-                buttons_pushed = 0;
                 write_board(board);
             }
 
