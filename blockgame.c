@@ -137,8 +137,11 @@ void move_cursor(uint8_t buttons_pushed, int* row, int* column) {
     if (buttons_pushed & B_RIGHT)
         (*column)++;
 
-    if (*row > 2) row = 0;
-    if (*column > 9) column = 0;
+    if (*row > 2)      *row = 0;
+    else if (*row < 0) *row = 2;
+
+    if (*column > 9)      *column = 0;
+    else if (*column < 0) *column = 9;
 }
 
 // handle a select button push
