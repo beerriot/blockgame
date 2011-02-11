@@ -4,6 +4,7 @@
 #define F_CPU 14745600
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 
 #include <avr/io.h>
@@ -305,6 +306,52 @@ void clear_blink_state(struct blink_state* blink_state) {
     blink_state->blink = 0;
 }
 
+int find_first_space(char row[10]) {
+    int c;
+    for (c = 0; c < 10; c++)
+        if (row[c] == ' ')
+            break;
+    return c;
+}
+
+void shift(char row[10], int start) {
+    for (; start < 9; start++)
+        row[start] = row[start+1];
+}
+
+int fill_spaces_row(char row[10]) {
+    int first_space = find_first_space(row);
+    if (first_space < 10) {
+        shift(row, first_space);
+        row[9] = 'a'+(rand() % 5);
+        return 1;
+    } else
+        return 0;
+}
+
+int fill_spaces(char board[3][10]) {
+    int r, spaces = 0;
+    for(r = 0; r < 3; r++) {
+        spaces |= fill_spaces_row(board[r]);
+    }
+    return spaces;
+}
+
+void animate_space_fill(char board[3][10]) {
+    int spaces = 1, move = 0;
+    while(spaces) {
+        if (animate) {
+            animate = 0;
+            if(move > 14) {
+                move = 0;
+                spaces = fill_spaces(board);
+                write_board(board);
+            } else
+                move++;
+        }
+    }
+}
+
 void maybe_blink(struct blink_state* blink_state,
                  char board[3][10],
                  struct point cursor) {
@@ -370,8 +417,13 @@ int main() {
 
             if(pressed_buttons) {
                 move_cursor(pressed_buttons, &cursor);
-                if(do_select(pressed_buttons, board, cursor, &selection))
-                    remove_sets(board);
+                if(do_select(pressed_buttons, board, cursor, &selection)) {
+                    do {
+                        remove_sets(board);
+                        write_board(board);
+                        animate_space_fill(board);
+                    } while (mark_sets(board));
+                }
                 write_board(board);
             }
 
