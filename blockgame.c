@@ -199,24 +199,78 @@ void set_selection(char board[3][10],
     board[selection->row][selection->column] &= ~0x20;
 }
 
-void clear_pieces(char board[3][10],
-                  struct point p1,
-                  struct point p2) {
-    // TODO: game logic
-    board[p1.row][p1.column] = 0xA1;
-    board[p2.row][p2.column] = 0xA1;
+// return the index to the row to the "right" of the given row
+int next_row(int r) {
+    if (++r > 2) return 0;
+    return r;
+}
+
+// return the index to the column "below" the given column
+int next_column(int c) {
+    if (++c > 9) return 0;
+    return c;
+}
+
+// determine if a, b, and c are the same piece
+int match(char a, char b, char c) {
+    return ((0x0F & b) == (0x0F & a)) && ((0x0F & b) == (0x0F & c));
+}
+
+// mark all sets on the board (as capital letters)
+int mark_sets(char board[3][10]) {
+    int r, c, found=0;
+    for(r=0; r < 3; r++) {
+        for(c=0; c < 10; c++) {
+            if(match(board[r][c], board[r][next_column(c)],
+                     board[r][next_column(next_column(c))])) {
+                found = 1;
+                board[r][c] &= ~0x20;
+                board[r][next_column(c)] &= ~0x20;
+                board[r][next_column(next_column(c))] &= ~0x20;
+            }
+            if(match(board[r][c], board[next_row(r)][c],
+                     board[next_row(next_row(r))][c])) {
+                found = 1;
+                board[r][c] &= ~0x20;
+                board[next_row(r)][c] &= ~0x20;
+                board[next_row(next_row(r))][c] &= ~0x20;
+            }
+        }
+    }
+    return found;
+}
+
+// remove all sets on the board (as previously marked)
+void remove_sets(char board[3][10]) {
+    int r, c;
+    for(r=0; r < 3; r++) {
+        for(c=0; c < 10; c++) {
+            if ((board[r][c] & 0x20) == 0)
+                board[r][c] = ' ';
+        }
+    }
+}
+
+// move the piece at a to position b, and the piece at b to positiona
+void swap_pieces(char board[3][10], struct point a, struct point b) {
+    char p = board[a.row][a.column];
+    board[a.row][a.column] = board[b.row][b.column];
+    board[b.row][b.column] = p;
 }
 
 // handle a select button push
-void do_select(uint8_t buttons_pushed,
+uint8_t do_select(uint8_t buttons_pushed,
                char board[3][10],
                struct point cursor,
                struct point *selection) {
     if (buttons_pushed & B_SELECT) {
         if (selection_is_active(*selection)) {
             if (are_neighbors(*selection, cursor)) {
-                clear_pieces(board, cursor, *selection);
-                invalidate_selection(selection);
+                clear_selection(board, selection);
+                swap_pieces(board, *selection, cursor);
+                if (mark_sets(board))
+                    return 1;
+                swap_pieces(board, *selection, cursor);
             } else {
                 clear_selection(board, selection);
                 if (cursor.row != selection->row ||
@@ -227,6 +281,7 @@ void do_select(uint8_t buttons_pushed,
             set_selection(board, selection, cursor);
         }
     }
+        return 0;
 }
 
 void write_row(char row[10]) {
@@ -315,7 +370,8 @@ int main() {
 
             if(pressed_buttons) {
                 move_cursor(pressed_buttons, &cursor);
-                do_select(pressed_buttons, board, cursor, &selection);
+                if(do_select(pressed_buttons, board, cursor, &selection))
+                    remove_sets(board);
                 write_board(board);
             }
 
