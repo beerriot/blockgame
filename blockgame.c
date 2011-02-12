@@ -468,12 +468,25 @@ int8_t valid_move_exists(char board[HEIGHT][WIDTH]) {
     return valid;
 }
 
-int main() {
+// create a fresh board to play
+void create_board(char board[HEIGHT][WIDTH]) {
+    int8_t delay = 0;
+    boot_board(board);
+    write_board(board);
+    while(delay < 30) {
+        if (animate) {
+            animate = 0;
+            // show the initial board for a moment
+            delay++;
+        }
+    }
+    // then remove initial sets
+    animate_clear_sets(board);
+}
 
+void play_game(char board[HEIGHT][WIDTH]) {
     // row and column of the cursor
     struct point cursor;
-    // the playing board
-    char board[HEIGHT][WIDTH];
     // read state
     struct button_states button_state;
     // latest new presses
@@ -482,8 +495,6 @@ int main() {
     struct blink_state blink_state;
     // selection state
     struct point selection;
-    // initial display delay
-    int start_delay = 0;
 
     clear_button_state(&button_state);
     clear_blink_state(&blink_state);
@@ -491,31 +502,9 @@ int main() {
     cursor.column = 0;
     invalidate_selection(&selection);
 
-    boot_lcd();
-    boot_pins();
-    boot_timer();
-    boot_adc();
-    srand(random_seed_from_ADC());
-    boot_board(board);
-
-    sei(); //enable interrupts
-
-    write_board(board);
-    while(1) {
-        // show the initial board for a moment
-        if (animate) {
-            animate = 0;
-            if (start_delay > 30)
-                break;
-            else
-                start_delay++;
-        }
-    }
-    // then remove initial sets
-    animate_clear_sets(board);
-
+    int8_t move_exists = valid_move_exists(board);
     // now let play begin
-    while(1) {
+    while(move_exists) {
         if (animate) {
             animate = 0;
             pressed_buttons = read_buttons(&button_state);
@@ -524,8 +513,7 @@ int main() {
                 move_cursor(pressed_buttons, &cursor);
                 if(do_select(pressed_buttons, board, cursor, &selection)) {
                     animate_clear_sets(board);
-                    if (!valid_move_exists(board))
-                        break;
+                    move_exists = valid_move_exists(board);
                 }
                 write_board(board);
             }
@@ -533,14 +521,41 @@ int main() {
             maybe_blink(&blink_state, board, cursor);
         }
     }
+}
 
+void show_game_over() {
+    int8_t delay = 0;
     // game is over (no more moves)
     lcd_clear_and_home();
     lcd_goto_position(2, 7);
     lcd_write_string(PSTR("GAME"));
     lcd_goto_position(3, 7);
     lcd_write_string(PSTR("OVER"));
-    while(1) { } // wait for reboot
+    while(delay < 300) {
+        if (animate) {
+            animate = 0;
+            // show game over for about 5 seconds
+            delay++;
+        }
+    }
+}
+
+int main() {
+    // the playing board
+    char board[HEIGHT][WIDTH];
+
+    boot_lcd();
+    boot_pins();
+    boot_timer();
+    boot_adc();
+    srand(random_seed_from_ADC());
+    sei(); //enable interrupts
+
+    while(1) {
+        create_board(board);
+        play_game(board);
+        show_game_over();
+    }
 
     return 0;
 }
