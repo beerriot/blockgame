@@ -30,8 +30,8 @@
 #define B_SELECT_INT (1<<PCINT13)
 
 // size of the game board
-#define WIDTH 20
-#define HEIGHT 4
+#define MAX_WIDTH 20
+#define MAX_HEIGHT 4
 
 // living state for the button reader
 struct button_states {
@@ -39,6 +39,15 @@ struct button_states {
     uint8_t stable;
     // the most recent read of the buttons
     uint8_t last_read;
+};
+
+struct game_state {
+    // size of the board
+    int width, height;
+    // number of unique piece types
+    int variety;
+    // board state (with enough room for the larges board)
+    char board[MAX_HEIGHT][MAX_WIDTH];
 };
 
 // living state for the cursor blinker
@@ -72,16 +81,16 @@ void boot_lcd() {
     lcd_home();
 }
 
-char random_piece() {
-    return 'a'+(rand() % 5);
+char random_piece(struct game_state game) {
+    return 'a'+(rand() % game.variety);
 }
 
 // initialize the board
-void boot_board(char board[HEIGHT][WIDTH]) {
+void boot_board(struct game_state* game) {
     int r,c;
-    for (r = 0; r < HEIGHT; r++)
-        for (c = 0; c < WIDTH; c++)
-            board[r][c] = random_piece();
+    for (r = 0; r < game->height; r++)
+        for (c = 0; c < game->width; c++)
+            game->board[r][c] = random_piece(*game);
 }
 
 // get the input pins setup at boot
@@ -140,7 +149,8 @@ uint8_t read_buttons(struct button_states* state) {
 
 // handle any directional button pushes
 void move_cursor(uint8_t buttons_pushed,
-                 struct point* cursor) {
+                 struct point* cursor,
+                 struct game_state game) {
     if (buttons_pushed & B_UP)
         cursor->row--;
     if (buttons_pushed & B_DOWN)
@@ -150,30 +160,33 @@ void move_cursor(uint8_t buttons_pushed,
     if (buttons_pushed & B_RIGHT)
         cursor->column++;
 
-    if (cursor->row > (HEIGHT-1))      cursor->row = 0;
-    else if (cursor->row < 0) cursor->row = (HEIGHT-1);
+    if (cursor->row > (game.height-1))
+        cursor->row = 0;
+    else if (cursor->row < 0)
+        cursor->row = (game.height-1);
 
-    if (cursor->column > (WIDTH-1))      cursor->column = 0;
-    else if (cursor->column < 0) cursor->column = (WIDTH-1);
+    if (cursor->column > (game.width-1))
+        cursor->column = 0;
+    else if (cursor->column < 0)
+        cursor->column = (game.width-1);
 }
 
-uint8_t are_neighbors(struct point p1, struct point p2) {
-    if (p1.row == p2.row) {
-        switch (p1.column - p2.column) {
-        case 1: return 1; // p1 is right of p2
-        case -1: return 1; // p1 is left of p2
-        case -(WIDTH-1): return 1; // p1 is on the left, p2 is on the right
-        case (WIDTH-1): return 1; // p1 is on the right, p2 is on the left
-        }
-    } else if (p1.column == p2.column) {
-        lcd_write_data('c');
-        switch (p1.row - p2.row) {
-        case 1: return 1; // p1 is below p2
-        case -1: return 1; // p1 is above p2
-        case -(HEIGHT-1): return 1; // p1 is on the top, p2 is on the bottom
-        case (HEIGHT-1):  return 1; // p1 is on the bottom, p2 is on the top
-        }
-    }
+// return true if the given columns/rows are neighbors
+uint8_t are_neighbor_rowcols(int rc1, int rc2, int max) {
+    int diff = rc1 - rc2;
+    return ((diff == 1) ||     // p1 is right-of/below p2
+            (-diff == 1) ||    // p1 is left-of/above of p2
+            (diff == max-1) || // p1 is far right/bottom, p2 is far left/top
+            (-diff == max-1)); // p1 is far left/top, p2 is far right/bottom
+}
+
+// return true if the given points are neighbors
+uint8_t are_neighbors(struct point p1, struct point p2,
+                      struct game_state game) {
+    if (p1.row == p2.row)
+        return are_neighbor_rowcols(p1.column, p2.column, game.width);
+    else if (p1.column == p2.column)
+        return are_neighbor_rowcols(p1.row, p2.row, game.height);
     return 0;
 }
 
@@ -185,30 +198,30 @@ uint8_t selection_is_active(struct point selection) {
     return selection.meta != 0;
 }
 
-void clear_selection(char board[HEIGHT][WIDTH], struct point* selection) {
+void clear_selection(struct game_state* game, struct point* selection) {
     if (selection_is_active(*selection))
-        board[selection->row][selection->column] |= 0x20;
+        game->board[selection->row][selection->column] |= 0x20;
     invalidate_selection(selection);
 }
 
-void set_selection(char board[HEIGHT][WIDTH],
+void set_selection(struct game_state* game,
                    struct point* selection,
                    struct point cursor) {
     selection->row = cursor.row;
     selection->column = cursor.column;
     selection->meta = 1;
-    board[selection->row][selection->column] &= ~0x20;
+    game->board[selection->row][selection->column] &= ~0x20;
 }
 
 // return the index to the row to the "right" of the given row
-int next_row(int r) {
-    if (++r > (HEIGHT-1)) return 0;
+int next_row(int r, struct game_state game) {
+    if (++r > (game.height-1)) return 0;
     return r;
 }
 
 // return the index to the column "below" the given column
-int next_column(int c) {
-    if (++c > (WIDTH-1)) return 0;
+int next_column(int c, struct game_state game) {
+    if (++c > (game.width-1)) return 0;
     return c;
 }
 
@@ -218,23 +231,29 @@ int match(char a, char b, char c) {
 }
 
 // mark all sets on the board (as capital letters)
-int mark_sets(char board[HEIGHT][WIDTH]) {
-    int r, c, found=0;
-    for(r=0; r < HEIGHT; r++) {
-        for(c=0; c < WIDTH; c++) {
-            if(match(board[r][c], board[r][next_column(c)],
-                     board[r][next_column(next_column(c))])) {
+int mark_sets(struct game_state* game) {
+    int r, nr, nnr, c, nc, nnc, found=0;
+    for(r=0, nr=next_row(r, *game), nnr=next_row(nr, *game);
+        r < game->height;
+        r++, nr=next_row(nr, *game), nnr=next_row(nnr, *game)) {
+        for(c=0, nc=next_column(c, *game), nnc=next_column(nc, *game);
+            c < game->width;
+            c++, nc=next_column(nc, *game), nnc=next_column(nnc, *game)) {
+            if(match(game->board[r][c],
+                     game->board[r][nc],
+                     game->board[r][nnc])) {
                 found = 1;
-                board[r][c] &= ~0x20;
-                board[r][next_column(c)] &= ~0x20;
-                board[r][next_column(next_column(c))] &= ~0x20;
+                game->board[r][c] &= ~0x20;
+                game->board[r][nc] &= ~0x20;
+                game->board[r][nnc] &= ~0x20;
             }
-            if(match(board[r][c], board[next_row(r)][c],
-                     board[next_row(next_row(r))][c])) {
+            if(match(game->board[r][c],
+                     game->board[nr][c],
+                     game->board[nnr][c])) {
                 found = 1;
-                board[r][c] &= ~0x20;
-                board[next_row(r)][c] &= ~0x20;
-                board[next_row(next_row(r))][c] &= ~0x20;
+                game->board[r][c] &= ~0x20;
+                game->board[nr][c] &= ~0x20;
+                game->board[nnr][c] &= ~0x20;
             }
         }
     }
@@ -242,62 +261,57 @@ int mark_sets(char board[HEIGHT][WIDTH]) {
 }
 
 // remove all sets on the board (as previously marked)
-void remove_sets(char board[HEIGHT][WIDTH]) {
+void remove_sets(struct game_state* game) {
     int r, c;
-    for(r=0; r < HEIGHT; r++) {
-        for(c=0; c < WIDTH; c++) {
-            if ((board[r][c] & 0x20) == 0)
-                board[r][c] = ' ';
+    for(r=0; r < game->height; r++) {
+        for(c=0; c < game->width; c++) {
+            if ((game->board[r][c] & 0x20) == 0)
+                game->board[r][c] = ' ';
         }
     }
 }
 
 // move the piece at a to position b, and the piece at b to positiona
-void swap_pieces(char board[HEIGHT][WIDTH],
+void swap_pieces(struct game_state* game,
                  struct point a, struct point b) {
-    char p = board[a.row][a.column];
-    board[a.row][a.column] = board[b.row][b.column];
-    board[b.row][b.column] = p;
+    char p = game->board[a.row][a.column];
+    game->board[a.row][a.column] = game->board[b.row][b.column];
+    game->board[b.row][b.column] = p;
 }
 
 // handle a select button push
 uint8_t do_select(uint8_t buttons_pushed,
-               char board[HEIGHT][WIDTH],
+                  struct game_state* game,
                struct point cursor,
                struct point *selection) {
     if (buttons_pushed & B_SELECT) {
         if (selection_is_active(*selection)) {
-            if (are_neighbors(*selection, cursor)) {
-                clear_selection(board, selection);
-                swap_pieces(board, *selection, cursor);
-                if (mark_sets(board))
+            if (are_neighbors(*selection, cursor, *game)) {
+                clear_selection(game, selection);
+                swap_pieces(game, *selection, cursor);
+                if (mark_sets(game))
                     return 1;
-                swap_pieces(board, *selection, cursor);
+                swap_pieces(game, *selection, cursor);
             } else {
-                clear_selection(board, selection);
+                clear_selection(game, selection);
                 if (cursor.row != selection->row ||
                     cursor.column != selection->column)
-                    set_selection(board, selection, cursor);
+                    set_selection(game, selection, cursor);
             }
         } else {
-            set_selection(board, selection, cursor);
+            set_selection(game, selection, cursor);
         }
     }
         return 0;
 }
 
-void write_row(char row[WIDTH]) {
-    int c;
-
-    for (c = 0; c < WIDTH; c++)
-        lcd_write_data(row[c]);
-}
-
-void write_board(char board[HEIGHT][WIDTH]) {
-    int r;
-    for (r=0; r < HEIGHT; r++) {
+void write_board(struct game_state game) {
+    int r, c;
+    for (r=0; r < game.height; r++) {
         lcd_goto_position(r, 0);
-        write_row(board[r]);
+        for (c=0; c < game.width; c++) {
+            lcd_write_data(game.board[r][c]);
+        }
     }
 }
 
@@ -306,46 +320,46 @@ void clear_blink_state(struct blink_state* blink_state) {
     blink_state->blink = 0;
 }
 
-int find_first_space(char row[WIDTH]) {
+int find_first_space(char* row, int width) {
     int c;
-    for (c = 0; c < WIDTH; c++)
+    for (c = 0; c < width; c++)
         if (row[c] == ' ')
             break;
     return c;
 }
 
-void shift(char row[WIDTH], int start) {
-    for (; start < (WIDTH-1); start++)
+void shift(char* row, int width, int start) {
+    for (; start < (width-1); start++)
         row[start] = row[start+1];
 }
 
-int fill_spaces_row(char row[WIDTH]) {
-    int first_space = find_first_space(row);
-    if (first_space < WIDTH) {
-        shift(row, first_space);
-        row[(WIDTH-1)] = random_piece();
+int fill_spaces_row(char* row, struct game_state game) {
+    int first_space = find_first_space(row, game.width);
+    if (first_space < game.width) {
+        shift(row, game.width, first_space);
+        row[(game.width-1)] = random_piece(game);
         return 1;
     } else
         return 0;
 }
 
-int fill_spaces(char board[HEIGHT][WIDTH]) {
+int fill_spaces(struct game_state* game) {
     int r, spaces = 0;
-    for(r = 0; r < HEIGHT; r++) {
-        spaces |= fill_spaces_row(board[r]);
+    for(r = 0; r < game->height; r++) {
+        spaces |= fill_spaces_row(game->board[r], *game);
     }
     return spaces;
 }
 
-void animate_space_fill(char board[HEIGHT][WIDTH]) {
+void animate_space_fill(struct game_state* game) {
     int spaces = 1, move = 0;
     while(spaces) {
         if (animate) {
             animate = 0;
             if(move > 14) {
                 move = 0;
-                spaces = fill_spaces(board);
-                write_board(board);
+                spaces = fill_spaces(game);
+                write_board(*game);
             } else
                 move++;
         }
@@ -353,13 +367,13 @@ void animate_space_fill(char board[HEIGHT][WIDTH]) {
 }
 
 void maybe_blink(struct blink_state* blink_state,
-                 char board[HEIGHT][WIDTH],
+                 struct game_state game,
                  struct point cursor) {
     // 30 should be a half second, if we run at 60 Hz
     if (blink_state->counter > 30) {
         lcd_goto_position(cursor.row, cursor.column);
         lcd_write_data(blink_state->blink ?
-                       board[cursor.row][cursor.column] : 0xA5);
+                       game.board[cursor.row][cursor.column] : 0xA5);
         blink_state->blink = ~blink_state->blink;
         blink_state->counter = 0;
     } else {
@@ -367,12 +381,12 @@ void maybe_blink(struct blink_state* blink_state,
     }
 }
 
-void animate_clear_sets(char board[HEIGHT][WIDTH]) {
+void animate_clear_sets(struct game_state* game) {
     do {
-        remove_sets(board);
-        write_board(board);
-        animate_space_fill(board);
-    } while (mark_sets(board));
+        remove_sets(game);
+        write_board(*game);
+        animate_space_fill(game);
+    } while (mark_sets(game));
 }
 
 void boot_adc() {
@@ -432,47 +446,47 @@ uint16_t random_seed_from_ADC() {
   return seed;
 }
 
-void clear_marks(char board[HEIGHT][WIDTH]) {
+void clear_marks(struct game_state* game) {
     int r, c;
-    for (r = 0; r < HEIGHT; r++)
-        for (c = 0; c < WIDTH; c++)
-            board[r][c] |= 0x20;
+    for (r = 0; r < game->height; r++)
+        for (c = 0; c < game->width; c++)
+            game->board[r][c] |= 0x20;
 }
 
-int8_t valid_move(char board[HEIGHT][WIDTH],
+int8_t valid_move(struct game_state game,
                   struct point a, struct point b) {
     int8_t valid = 0;
-    swap_pieces(board, a, b);
-    if (mark_sets(board)) {
+    swap_pieces(&game, a, b);
+    if (mark_sets(&game)) {
         valid = 1;
-        clear_marks(board);
+        clear_marks(&game);
     }
-    swap_pieces(board, a, b);
+    swap_pieces(&game, a, b);
     return valid;
 }
 
-int8_t valid_move_exists(char board[HEIGHT][WIDTH]) {
+int8_t valid_move_exists(struct game_state game) {
     struct point check, right, below;
     int8_t valid = 0;
     for (check.row = 0, right.row = 0, below.row = 1;
-         check.row < HEIGHT;
-         check.row++, right.row++, below.row=next_row(below.row)) {
+         check.row < game.height;
+         check.row++, right.row++, below.row=next_row(below.row, game)) {
         for (check.column = 0, right.column = 1, below.column = 0;
-             !valid && check.column < WIDTH;
-             check.column++, right.column=next_column(right.column),
+             !valid && check.column < game.width;
+             check.column++, right.column=next_column(right.column, game),
                  below.column++) {
-            valid = valid_move(board, check, right) ||
-                valid_move(board, check, below);
+            valid = valid_move(game, check, right) ||
+                valid_move(game, check, below);
         }
     }
     return valid;
 }
 
 // create a fresh board to play
-void create_board(char board[HEIGHT][WIDTH]) {
+void create_board(struct game_state* game) {
     int8_t delay = 0;
-    boot_board(board);
-    write_board(board);
+    boot_board(game);
+    write_board(*game);
     while(delay < 30) {
         if (animate) {
             animate = 0;
@@ -481,10 +495,10 @@ void create_board(char board[HEIGHT][WIDTH]) {
         }
     }
     // then remove initial sets
-    animate_clear_sets(board);
+    animate_clear_sets(game);
 }
 
-void play_game(char board[HEIGHT][WIDTH]) {
+void play_game(struct game_state* game) {
     // row and column of the cursor
     struct point cursor;
     // read state
@@ -502,7 +516,7 @@ void play_game(char board[HEIGHT][WIDTH]) {
     cursor.column = 0;
     invalidate_selection(&selection);
 
-    int8_t move_exists = valid_move_exists(board);
+    int8_t move_exists = valid_move_exists(*game);
     // now let play begin
     while(move_exists) {
         if (animate) {
@@ -510,15 +524,15 @@ void play_game(char board[HEIGHT][WIDTH]) {
             pressed_buttons = read_buttons(&button_state);
 
             if(pressed_buttons) {
-                move_cursor(pressed_buttons, &cursor);
-                if(do_select(pressed_buttons, board, cursor, &selection)) {
-                    animate_clear_sets(board);
-                    move_exists = valid_move_exists(board);
+                move_cursor(pressed_buttons, &cursor, *game);
+                if(do_select(pressed_buttons, game, cursor, &selection)) {
+                    animate_clear_sets(game);
+                    move_exists = valid_move_exists(*game);
                 }
-                write_board(board);
+                write_board(*game);
             }
 
-            maybe_blink(&blink_state, board, cursor);
+            maybe_blink(&blink_state, *game, cursor);
         }
     }
 }
@@ -542,7 +556,10 @@ void show_game_over() {
 
 int main() {
     // the playing board
-    char board[HEIGHT][WIDTH];
+    struct game_state game;
+    game.width = MAX_WIDTH;
+    game.height = MAX_HEIGHT;
+    game.variety = 5;
 
     boot_lcd();
     boot_pins();
@@ -552,8 +569,8 @@ int main() {
     sei(); //enable interrupts
 
     while(1) {
-        create_board(board);
-        play_game(board);
+        create_board(&game);
+        play_game(&game);
         show_game_over();
     }
 
