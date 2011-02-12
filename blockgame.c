@@ -375,6 +375,63 @@ void animate_clear_sets(char board[HEIGHT][WIDTH]) {
     } while (mark_sets(board));
 }
 
+void boot_adc() {
+  // set analog to digital converter
+  // for external reference (5v), single ended input ADC0
+  ADMUX = 0;
+ 
+  // set analog to digital converter
+  // to be enabled, with a clock prescale of 1/128
+  // so that the ADC clock runs at 115.2kHz.
+  ADCSRA = (1<<ADEN) | (1<<ADPS2) | (1<<ADPS1) | (1<<ADPS0);
+ 
+  // fire a conversion just to get the ADC warmed up
+  ADCSRA |= (1<<ADSC);
+}
+ 
+uint8_t adc_get_next_bit() {
+  // Lowest bit from ADC is the one most likely to change due to minute
+  // variations in temperature as measured by LM37 and noise in power
+  // supply.  Noise is generally a bad thing, but in our case,
+  // the more - the better!  This function reads just the lowest bit
+  // from ADC and discards the rest.
+ 
+  // Wait until ADSC goes low (conversion completed).
+  while (ADCSRA & (1<<ADSC)) { }
+ 
+  // Read ADCL (AD low byte).  This one has the bit that we want.
+  // (Mike mentions in tempsensor.c that ADCL has to be read first,
+  // ATmega doc PDF page 259).
+  uint16_t adc = ADCL;
+  // read ADCH anyway to reset for the next conversion
+  // do "something" with it to prevent compiler optimization
+  adc ^= ADCH;
+ 
+  // Start the next conversion.
+  ADCSRA |= (1<<ADSC);
+ 
+  // Return the lowest bit of ADCL.
+  return adc & 1;
+}
+ 
+// Generate and return a random value.
+uint16_t random_seed_from_ADC() {
+  uint16_t seed = 0;
+  int8_t i, b;
+ 
+  // 'seed' is the value we are going to generate.
+  // Starting with zeros in all 16 bits of the 16-bit unsigned integer,
+  // we XOR the bits one by one with a highly volatile bit value from ADC,
+  // and do it 100 times to mix things up really well.
+  for (i = 0; i < 100; i++) {
+    for (b = 0; b < 16; b++) {
+      // XOR the seed with the random bit from ADC shifted to position b.
+      seed ^= (adc_get_next_bit() << b);
+    }
+  }
+  return seed;
+}
+
 int main() {
 
     // row and column of the cursor
@@ -392,7 +449,6 @@ int main() {
     // initial display delay
     int start_delay = 0;
 
-    boot_board(board);
     clear_button_state(&button_state);
     clear_blink_state(&blink_state);
     cursor.row = 0;
@@ -402,6 +458,9 @@ int main() {
     boot_lcd();
     boot_pins();
     boot_timer();
+    boot_adc();
+    srand(random_seed_from_ADC());
+    boot_board(board);
 
     sei(); //enable interrupts
 
