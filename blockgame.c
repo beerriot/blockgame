@@ -367,6 +367,14 @@ void maybe_blink(struct blink_state* blink_state,
     }
 }
 
+void animate_clear_sets(char board[HEIGHT][WIDTH]) {
+    do {
+        remove_sets(board);
+        write_board(board);
+        animate_space_fill(board);
+    } while (mark_sets(board));
+}
+
 int main() {
 
     // row and column of the cursor
@@ -381,6 +389,8 @@ int main() {
     struct blink_state blink_state;
     // selection state
     struct point selection;
+    // initial display delay
+    int start_delay = 0;
 
     boot_board(board);
     clear_button_state(&button_state);
@@ -394,7 +404,22 @@ int main() {
     boot_timer();
 
     sei(); //enable interrupts
+
     write_board(board);
+    while(1) {
+        // show the initial board for a moment
+        if (animate) {
+            animate = 0;
+            if (start_delay > 30)
+                break;
+            else
+                start_delay++;
+        }
+    }
+    // then remove initial sets
+    animate_clear_sets(board);
+
+    // now let play begin
     while(1) {
         if (animate) {
             animate = 0;
@@ -402,13 +427,8 @@ int main() {
 
             if(pressed_buttons) {
                 move_cursor(pressed_buttons, &cursor);
-                if(do_select(pressed_buttons, board, cursor, &selection)) {
-                    do {
-                        remove_sets(board);
-                        write_board(board);
-                        animate_space_fill(board);
-                    } while (mark_sets(board));
-                }
+                if(do_select(pressed_buttons, board, cursor, &selection))
+                    animate_clear_sets(board);
                 write_board(board);
             }
 
