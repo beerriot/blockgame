@@ -432,6 +432,42 @@ uint16_t random_seed_from_ADC() {
   return seed;
 }
 
+void clear_marks(char board[HEIGHT][WIDTH]) {
+    int r, c;
+    for (r = 0; r < HEIGHT; r++)
+        for (c = 0; c < WIDTH; c++)
+            board[r][c] |= 0x20;
+}
+
+int8_t valid_move(char board[HEIGHT][WIDTH],
+                  struct point a, struct point b) {
+    int8_t valid = 0;
+    swap_pieces(board, a, b);
+    if (mark_sets(board)) {
+        valid = 1;
+        clear_marks(board);
+    }
+    swap_pieces(board, a, b);
+    return valid;
+}
+
+int8_t valid_move_exists(char board[HEIGHT][WIDTH]) {
+    struct point check, right, below;
+    int8_t valid = 0;
+    for (check.row = 0, right.row = 0, below.row = 1;
+         check.row < HEIGHT;
+         check.row++, right.row++, below.row=next_row(below.row)) {
+        for (check.column = 0, right.column = 1, below.column = 0;
+             !valid && check.column < WIDTH;
+             check.column++, right.column=next_column(right.column),
+                 below.column++) {
+            valid = valid_move(board, check, right) ||
+                valid_move(board, check, below);
+        }
+    }
+    return valid;
+}
+
 int main() {
 
     // row and column of the cursor
@@ -486,13 +522,25 @@ int main() {
 
             if(pressed_buttons) {
                 move_cursor(pressed_buttons, &cursor);
-                if(do_select(pressed_buttons, board, cursor, &selection))
+                if(do_select(pressed_buttons, board, cursor, &selection)) {
                     animate_clear_sets(board);
+                    if (!valid_move_exists(board))
+                        break;
+                }
                 write_board(board);
             }
 
             maybe_blink(&blink_state, board, cursor);
         }
     }
+
+    // game is over (no more moves)
+    lcd_clear_and_home();
+    lcd_goto_position(2, 7);
+    lcd_write_string(PSTR("GAME"));
+    lcd_goto_position(3, 7);
+    lcd_write_string(PSTR("OVER"));
+    while(1) { } // wait for reboot
+
     return 0;
 }
