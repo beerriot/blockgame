@@ -21,13 +21,7 @@
 #define B_DOWN   (1<<PC1)
 #define B_UP     (1<<PC2)
 #define B_RIGHT  (1<<PC3)
-#define B_SELECT (1<<PC5)
-
-#define B_LEFT_INT   (1<<PCINT8)
-#define B_DOWN_INT   (1<<PCINT9)
-#define B_UP_INT     (1<<PCINT10)
-#define B_RIGHT_INT  (1<<PCINT11)
-#define B_SELECT_INT (1<<PCINT13)
+#define B_SELECT (1<<PC4)
 
 // size of the game board
 #define MAX_WIDTH 20
@@ -130,7 +124,7 @@ void clear_button_state(struct button_states* state) {
 // what buttons are now pushed that weren't before
 uint8_t read_buttons(struct button_states* state) {
     // get a fresh read
-    uint8_t fresh = PINC & (B_LEFT|B_DOWN|B_UP|B_RIGHT|B_SELECT);
+    uint8_t fresh = ~PINC & (B_LEFT|B_DOWN|B_UP|B_RIGHT|B_SELECT);
 
     // factor out bounces by sampling twice before determining
     // what is actually pressed
