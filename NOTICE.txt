@@ -1,0 +1,5 @@
+Portions of this code were influenced by the NerdKits example project
+created by Humberto Evans.
+
+The ADC-random-generation code was originally created by the forum
+member "wayward" at http://www.nerdkits.com/forum/thread/13/

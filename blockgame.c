@@ -1,5 +1,7 @@
 // blockgame
 // for NerdKits with ATmega168
+// copyright 2011 Bryan Fink
+// license: see LICENSE.txt
 
 #define F_CPU 14745600
 
