@@ -3,18 +3,13 @@
 
 #define F_CPU 14745600
 
-#include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 
-#include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <inttypes.h>
 
-#include "../libnerdkits/delay.h"
 #include "../libnerdkits/lcd.h"
-#include "../libnerdkits/uart.h"
 
 // pin definitions for buttons
 #define B_LEFT   (1<<PC0)
@@ -84,7 +79,7 @@ void boot_board(struct game_state* game) {
     int r,c;
     for (r = 0; r < game->height; r++)
         for (c = 0; c < game->width; c++)
-            game->board[r][c] = random_piece(*game);
+            game->board[r][c] = ' ';
 }
 
 // get the input pins setup at boot
@@ -425,18 +420,16 @@ uint8_t adc_get_next_bit() {
 // Generate and return a random value.
 uint16_t random_seed_from_ADC() {
   uint16_t seed = 0;
-  int8_t i, b;
+  int8_t i;
  
   // 'seed' is the value we are going to generate.
   // Starting with zeros in all 16 bits of the 16-bit unsigned integer,
   // we XOR the bits one by one with a highly volatile bit value from ADC,
   // and do it 100 times to mix things up really well.
-  for (i = 0; i < 100; i++) {
-    for (b = 0; b < 16; b++) {
-      // XOR the seed with the random bit from ADC shifted to position b.
-      seed ^= (adc_get_next_bit() << b);
+    for (i = 0; i < 100; i++) {
+        // XOR the seed with the random bit from ADC shifted
+        seed ^= (adc_get_next_bit() << (i%16));
     }
-  }
   return seed;
 }
 
@@ -476,20 +469,91 @@ int8_t valid_move_exists(struct game_state game) {
     return valid;
 }
 
-// create a fresh board to play
-void create_board(struct game_state* game) {
-    int8_t delay = 0;
-    boot_board(game);
-    write_board(*game);
-    while(delay < 30) {
+void fb_prompt(int row, char left, char right) {
+    lcd_goto_position(row, 10);
+    lcd_write_data(left);
+    lcd_goto_position(row, 16);
+    lcd_write_data(right);
+}
+void focus_prompt(int row) {
+    fb_prompt(row, 0x7e, 0x7f);
+}
+
+void blur_prompt(int row) {
+    fb_prompt(row, ' ', ' ');
+}
+
+void write_prompt(int row, int val) {
+    lcd_goto_position(row, 12);
+    if (val < 10)
+        lcd_write_data(' ');
+    lcd_write_int16(val);
+}
+
+void prompt_params(struct game_state* game) {
+    int ready = 0, prompt = 0;
+    uint8_t pressed_buttons;
+    int *field, min, max;
+    struct button_states button_state;
+    clear_button_state(&button_state);
+    lcd_clear_and_home();
+
+    lcd_goto_position(0, 3);
+    lcd_write_string(PSTR("width:"));
+    write_prompt(0, game->width);
+    focus_prompt(0);
+
+    lcd_goto_position(1, 2);
+    lcd_write_string(PSTR("height:"));
+    write_prompt(1, game->height);
+
+    lcd_goto_position(2, 1);
+    lcd_write_string(PSTR("variety:"));
+    write_prompt(2, game->variety);
+
+    lcd_goto_position(3, 11);
+    lcd_write_string(PSTR("start"));
+
+    while(!ready) {
         if (animate) {
             animate = 0;
-            // show the initial board for a moment
-            delay++;
+
+            pressed_buttons = read_buttons(&button_state);
+            if(pressed_buttons) {
+                if (pressed_buttons & B_SELECT && prompt == 3) {
+                    ready = 1;
+                } else if (pressed_buttons & (B_UP | B_DOWN | B_SELECT)) {
+                    blur_prompt(prompt);
+                    if (pressed_buttons & B_UP) {
+                        prompt--;
+                        if (prompt < 0) prompt = 3;
+                    } else {
+                        prompt++;
+                        if (prompt > 3) prompt = 0;
+                    }
+                    focus_prompt(prompt);
+                } else {
+                    switch (prompt) {
+                    case 0: field = &game->width;
+                        min=10; max=MAX_WIDTH;
+                        break;
+                    case 1: field = &game->height;
+                        min=3; max=MAX_HEIGHT;
+                        break;
+                    default: field = &game->variety;
+                        min=5; max=26;
+                    }
+                    if (pressed_buttons & B_RIGHT &&
+                        *field < max)
+                        *field = *field+1;
+                    else if (pressed_buttons & B_LEFT &&
+                             *field > min)
+                        *field = *field-1;
+                    write_prompt(prompt, *field);
+                }
+            }
         }
     }
-    // then remove initial sets
-    animate_clear_sets(game);
 }
 
 void play_game(struct game_state* game) {
@@ -510,6 +574,9 @@ void play_game(struct game_state* game) {
     cursor.column = 0;
     invalidate_selection(&selection);
 
+    boot_board(game);
+    lcd_clear_and_home();
+    animate_clear_sets(game);
     int8_t move_exists = valid_move_exists(*game);
     // now let play begin
     while(move_exists) {
@@ -563,7 +630,7 @@ int main() {
     sei(); //enable interrupts
 
     while(1) {
-        create_board(&game);
+        prompt_params(&game);
         play_game(&game);
         show_game_over();
     }
