@@ -99,13 +99,13 @@ void boot_timer() {
     TCCR0A |= (1<<WGM01);
 
     // system clock is ~1.47Mhz
-    // 1470000/1024 = 1435
-    // 1435/30 = 212 (30Hz being target frame rate)
+    // 14740000/1024 = 14395
+    // 14395/60 = 240 (60Hz being target frame rate)
     // choose clock source as system/prescaler1024
     TCCR0B |= (1<<CS02) | (1<<CS00);
 
     // choose the value for Output Compare A
-    OCR0A = 212;
+    OCR0A = 240;
   
     // endable Timer Output Compare Match A Interrupt 0
     TIMSK0 |= (1<<OCIE0A);
