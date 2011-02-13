@@ -1,0 +1,86 @@
+Blockgame is a demonstration of using a NerdKit for simple games.  It
+is an implementation of the classic "clear rows of three matching
+pieces" game.
+
+* Basic Play
+
+Play begins with a board of random tiles:
+
+  abcdefg
+  cabfgde
+  gbacedf
+
+The player makes a move by choosing two adjacent tiles to swap, such
+that a line of three matching tiles are made.  For example, swapping
+the 'a' and 'b' in the second row of the example above creates a line
+of 'b':
+
+  abcdefg
+  cbafgde
+  gbacedf
+
+The 'b' tiles are then removed from the board, and new random tiles
+added to the right side:
+
+  acdefga
+  cafgded
+  gacedfb
+
+Play continues until it is not possible to make a match with just one
+swap.
+
+This version differs from other common versions, in that matches and
+swaps may "wrap" around any side.
+
+* Nerdkit Play
+
+At startup, the player is presented with choices of what size of
+playing field to use, and how many unique tile types to play with (the
+"variety").
+
+The player chooses tiles to swap by clicking left/down/up/right
+buttons until the cursor is over one of the pieces to be swapped.  The
+player then presses the select button, then moves to the other tile to
+swap, and presses the select button again.  A selected tile is noted
+by a capital letter (all other tiles are lower-case).
+
+When no moves remain, a "game over" screen is shown for a few seconds.
+The user is then returned to the start menu to begin a new game.
+
+* Nerdkit schematic
+
+The schematic for the NerdKit while running the game is:
+
+#+BEGIN_EXAMPLE
+                   |---|
+                ^__|1  |_
+                  _|   |__/ o--| (select)
+                  _| A |__/ o--| (right)
+ lcd14_____________| T |__/ o--| (up)
+ lcd13_____________| m |__/ o--| (down)
+ lcd12_____________| e |__/ o--| (left)
+     ^_____________| g |_______|
+       |  _________| a |__^   gnd
+ 0.1uF =  |    ____| 1 |__|
+   gnd_|__|   |_X__| 6 |_    (14.7Mhz xtal)
+ lcd11_____________| 8 |_
+ lcd6______________|   |_
+ lcd4______________|   |_
+                  _|   |_
+ lcd2-^            |---|
+ lcd5--------|
+ lcd1--------|
+ lcd3--vvvv--|
+        1k  gnd
+#+END_EXAMPLE
+
+For programming, connect the yellow programmer wire to ATmega168 pin 2,
+ and the green programmer wire to pin 3, then tie pin 14 to ground.
+
+* Nerdkit Building
+
+To compile and program the NerdKit, connect the programmer, and type
+'make' at the commandline (the top of Makefile will give you an idea
+of where the NerdKit libraries should be located).
+
+To compile without programming, use 'make blockgame.hex'.
