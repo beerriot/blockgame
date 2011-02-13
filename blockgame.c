@@ -599,12 +599,12 @@ void play_game(struct game_state* game) {
 }
 
 void show_game_over() {
-    int8_t delay = 0;
+    int delay = 0;
     // game is over (no more moves)
     lcd_clear_and_home();
-    lcd_goto_position(2, 7);
+    lcd_goto_position(1, 8);
     lcd_write_string(PSTR("GAME"));
-    lcd_goto_position(3, 7);
+    lcd_goto_position(2, 8);
     lcd_write_string(PSTR("OVER"));
     while(delay < 300) {
         if (animate) {
