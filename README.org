@@ -2,6 +2,9 @@ Blockgame is a demonstration of using a NerdKit for simple games.  It
 is an implementation of the classic "clear rows of three matching
 pieces" game.
 
+More information, including a demo, is available at
+http://blog.beerriot.com/2011/02/14/nerdkit-gaming/
+
 * Basic Play
 
 Play begins with a board of random tiles:
