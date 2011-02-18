@@ -41,6 +41,8 @@ struct {
     char board[MAX_HEIGHT][MAX_WIDTH];
 } game;
 
+uint16_t score;
+
 // living state for the cursor blinker
 struct blink_state {
     // the clock counter
@@ -249,14 +251,18 @@ int mark_sets() {
 }
 
 // remove all sets on the board (as previously marked)
-void remove_sets() {
+uint8_t remove_sets() {
     int r, c;
+    uint8_t removed = 0;
     for(r=0; r < game.height; r++) {
         for(c=0; c < game.width; c++) {
-            if ((game.board[r][c] & 0x20) == 0)
+            if ((game.board[r][c] & 0x20) == 0) {
                 game.board[r][c] = ' ';
+                removed++;
+            }
         }
     }
+    return removed;
 }
 
 // move the piece at a to position b, and the piece at b to positiona
@@ -367,8 +373,10 @@ void maybe_blink(struct blink_state* blink_state,
 }
 
 void animate_clear_sets() {
+    uint8_t combos = 1;
     do {
-        remove_sets();
+        score += (combos * remove_sets());
+        combos++;
         write_board();
         animate_space_fill();
     } while (mark_sets());
@@ -572,6 +580,7 @@ void play_game() {
     boot_board();
     lcd_clear_and_home();
     animate_clear_sets();
+    score = 0; // no points for tiles removed before play starts
     int8_t move_exists = valid_move_exists();
     // now let play begin
     while(move_exists) {
@@ -601,6 +610,9 @@ void show_game_over() {
     lcd_write_string(PSTR("GAME"));
     lcd_goto_position(2, 8);
     lcd_write_string(PSTR("OVER"));
+    lcd_goto_position(3, 4);
+    lcd_write_string(PSTR("score: "));
+    lcd_write_int16(score);
     while(delay < 300) {
         if (animate) {
             animate = 0;
