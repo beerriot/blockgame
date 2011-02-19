@@ -41,14 +41,6 @@ struct {
     char board[MAX_HEIGHT][MAX_WIDTH];
 } game;
 
-// living state for the cursor blinker
-struct blink_state {
-    // the clock counter
-    uint8_t counter;
-    // which blink are we on?
-    uint8_t blink;
-};
-
 // generic "point on the board" structure
 struct point {
     int8_t row;
@@ -70,6 +62,16 @@ ISR(TIMER0_COMPA_vect) {
 void boot_lcd() {
     lcd_init();
     lcd_home();
+}
+
+void start_blinking() {
+    lcd_set_type_command();
+    lcd_write_byte(0x0F);
+}
+
+void stop_blinking() {
+    lcd_set_type_command();
+    lcd_write_byte(0x0C);
 }
 
 char random_piece() {
@@ -190,6 +192,8 @@ uint8_t selection_is_active(struct point selection) {
 void clear_selection(struct point* selection) {
     if (selection_is_active(*selection))
         game.board[selection->row][selection->column] |= 0x20;
+    lcd_goto_position(selection->row, selection->column);
+    lcd_write_data(game.board[selection->row][selection->column]);
     invalidate_selection(selection);
 }
 
@@ -199,6 +203,8 @@ void set_selection(struct point* selection,
     selection->column = cursor.column;
     selection->meta = 1;
     game.board[selection->row][selection->column] &= ~0x20;
+    lcd_goto_position(selection->row, selection->column);
+    lcd_write_data(game.board[selection->row][selection->column]);
 }
 
 // return the index to the row to the "right" of the given row
@@ -301,11 +307,6 @@ void write_board() {
     }
 }
 
-void clear_blink_state(struct blink_state* blink_state) {
-    blink_state->counter = 0;
-    blink_state->blink = 0;
-}
-
 int find_first_space(char* row, int width) {
     int c;
     for (c = 0; c < width; c++)
@@ -349,20 +350,6 @@ void animate_space_fill() {
             } else
                 move++;
         }
-    }
-}
-
-void maybe_blink(struct blink_state* blink_state,
-                 struct point cursor) {
-    // 30 should be a half second, if we run at 60 Hz
-    if (blink_state->counter > 30) {
-        lcd_goto_position(cursor.row, cursor.column);
-        lcd_write_data(blink_state->blink ?
-                       game.board[cursor.row][cursor.column] : 0xA5);
-        blink_state->blink = ~blink_state->blink;
-        blink_state->counter = 0;
-    } else {
-        blink_state->counter++;
     }
 }
 
@@ -491,6 +478,7 @@ void prompt_params() {
     int *field, min, max;
     struct button_states button_state;
     clear_button_state(&button_state);
+    stop_blinking();
     lcd_clear_and_home();
 
     lcd_goto_position(0, 3);
@@ -558,13 +546,10 @@ void play_game() {
     struct button_states button_state;
     // latest new presses
     uint8_t pressed_buttons;
-    // blink state
-    struct blink_state blink_state;
     // selection state
     struct point selection;
 
     clear_button_state(&button_state);
-    clear_blink_state(&blink_state);
     cursor.row = 0;
     cursor.column = 0;
     invalidate_selection(&selection);
@@ -572,6 +557,8 @@ void play_game() {
     boot_board();
     lcd_clear_and_home();
     animate_clear_sets();
+    lcd_goto_position(cursor.row, cursor.column);
+    start_blinking();
     int8_t move_exists = valid_move_exists();
     // now let play begin
     while(move_exists) {
@@ -580,15 +567,15 @@ void play_game() {
             pressed_buttons = read_buttons(&button_state);
 
             if(pressed_buttons) {
+                stop_blinking();
                 move_cursor(pressed_buttons, &cursor);
                 if(do_select(pressed_buttons, cursor, &selection)) {
                     animate_clear_sets();
                     move_exists = valid_move_exists();
                 }
-                write_board();
+                lcd_goto_position(cursor.row, cursor.column);
+                start_blinking();
             }
-
-            maybe_blink(&blink_state, cursor);
         }
     }
 }
@@ -596,6 +583,7 @@ void play_game() {
 void show_game_over() {
     int delay = 0;
     // game is over (no more moves)
+    stop_blinking();
     lcd_clear_and_home();
     lcd_goto_position(1, 8);
     lcd_write_string(PSTR("GAME"));
