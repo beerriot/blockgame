@@ -1,5 +1,5 @@
 GCCFLAGS=-g -Os -Wall -mmcu=atmega168 
-LINKFLAGS=-Wl,-u,vfscanf -lscanf_flt -lm
+LINKFLAGS=-lm
 AVRDUDEFLAGS=-c avr109 -p m168 -b 115200 -P /dev/cu.PL2303-0000101D
 LINKOBJECTS=../libnerdkits/delay.o ../libnerdkits/lcd.o
 
