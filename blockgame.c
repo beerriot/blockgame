@@ -24,6 +24,10 @@
 #define MAX_WIDTH 20
 #define MAX_HEIGHT 4
 
+// number of high scores we keep around
+#define HIGH_SCORES 3
+#define INITIALS 3
+
 // living state for the button reader
 struct button_states {
     // the stable state (repeated agreeing reads) of the buttons
@@ -43,6 +47,14 @@ struct {
 
 uint16_t score;
 
+// the high score table
+struct highscore {
+    // initials of the player that made the score
+    char initials[INITIALS];
+    // the player's score
+    uint16_t score;
+} highscores[HIGH_SCORES];
+
 // generic "point on the board" structure
 struct point {
     int8_t row;
@@ -58,6 +70,15 @@ volatile int animate = 0;
 ISR(TIMER0_COMPA_vect) {
     // time to cycle animations
     animate = 1;
+}
+
+void simple_delay(int clicks) {
+    while (clicks > 0) {
+        if (animate) {
+            animate = 0;
+            clicks--;
+        }
+    }
 }
 
 // get the LCD setup at boot
@@ -589,8 +610,194 @@ void play_game() {
     }
 }
 
+char read_eeprom_byte(uint16_t address) {
+    // wait for completion of previous write)
+    while (EECR & (1<<EEPE)) {}
+    EEAR = address; //setup address
+    EECR |= (1<<EERE); //start eeprom read
+    return EEDR; // return data from register
+}
+
+void write_eeprom_byte(char byte, uint16_t address) {
+    // wait for completion of previous write
+    while (EECR & (1<<EEPE)) {}
+    EEAR = address; //setup address
+    EEDR = byte; //setup data
+    EECR |= (1<<EEMPE); //enable writes
+    EECR |= (1<<EEPE); //start write
+}
+
+void read_eeprom_bytes(unsigned char* dest, int offset, int count) {
+    for (; count >= 0; count--, dest++, offset++) 
+        *dest = read_eeprom_byte(offset);
+}
+
+void write_eeprom_bytes(unsigned char* src, int offset, int count) {
+    for(; count >= 0; count--, src++, offset++)
+        write_eeprom_byte(*src, offset);
+}
+
+uint8_t highscore_checksum() {
+    uint8_t i, x = 0;
+    unsigned char* hs = (unsigned char*)&highscores;
+    for (i = 0; i < HIGH_SCORES*sizeof(struct highscore); i++)
+        x ^= *(hs+i);
+    return x;
+}
+
+uint8_t read_highscores() {
+    uint8_t x, s, c;
+    cli(); // disable interrupts
+    read_eeprom_bytes((unsigned char*)&highscores,
+                      0,
+                      HIGH_SCORES*sizeof(struct highscore));
+    read_eeprom_bytes(&x,
+                      HIGH_SCORES*sizeof(struct highscore),
+                      1);
+    sei();
+    for (s = 0; s < HIGH_SCORES; s++)
+        for (c = 0; c < INITIALS; c++)
+            if (highscores[s].initials[c] <= 'a' ||
+                highscores[s].initials[c] >= 'z')
+                return 0;
+    return x == highscore_checksum();
+}
+
+void clear_highscores() {
+    uint8_t s, c;
+    for (s = 0; s < HIGH_SCORES; s++) {
+        for (c = 0; c < INITIALS; c++)
+            highscores[s].initials[c] = 'a';
+        highscores[s].score = 0;
+    }
+}
+
+void write_highscores() {
+    uint8_t x;
+    cli(); //disable interrupts
+    x = highscore_checksum();
+    write_eeprom_bytes((unsigned char*)&highscores,
+                       0,
+                       HIGH_SCORES*sizeof(struct highscore));
+    write_eeprom_bytes((unsigned char*)&x,
+                       HIGH_SCORES*sizeof(struct highscore),
+                       1);
+    sei();
+}
+
+void validate_highscores() {
+    if (!read_highscores()) {
+        clear_highscores();
+        write_highscores();
+    }
+}
+
+void write_highscore(int rank, int lcd_line) {
+    int c;
+    lcd_goto_position(lcd_line, 6);
+    for (c = 0; c < INITIALS; c++)
+        lcd_write_data(highscores[rank].initials[c]);
+    lcd_write_byte(' ');
+    lcd_write_int16(highscores[rank].score);
+}
+
+void show_highscores() {
+    int s;
+    // game is over (no more moves)
+    lcd_clear_and_home();
+    stop_blinking();
+    lcd_goto_position(0, 5);
+    lcd_write_string(PSTR("HIGH SCORES"));
+    for (s = 0; s < HIGH_SCORES; s++) {
+        write_highscore(s, 1+s);
+    }
+
+    simple_delay(300);
+}
+
+void alter_highscore_initials(uint8_t buttons, int rank, int i) {
+    if (buttons & B_UP) {
+        if (highscores[rank].initials[i] < 'z')
+            highscores[rank].initials[i]++;
+        else
+            highscores[rank].initials[i] = 'a';
+    } else if (buttons & B_DOWN) {
+        if (highscores[rank].initials[i] > 'a')
+            highscores[rank].initials[i]--;
+        else
+            highscores[rank].initials[i] = 'z';
+    }
+}
+
+int move_highscore_cursor(uint8_t buttons, int* i) {
+    if (buttons & B_LEFT) {
+        if (*i > 0)
+            *i -= 1;
+        else
+            *i = 2;
+    } else if (buttons & (B_RIGHT | B_SELECT)) {
+        if (*i < 2)
+            *i += 1;
+        else if (buttons & B_SELECT)
+            return 1;
+        else
+            *i = 0;
+    }
+    return 0;
+}
+
+void new_highscore(int rank) {
+    int i=0, c;
+    struct button_states button_state;
+    uint8_t pressed_buttons;
+    clear_button_state(&button_state);
+    for (c = 0; c < INITIALS; c++)
+        highscores[rank].initials[c] = 'a';
+    highscores[rank].score = score;
+
+    lcd_clear_and_home();
+    lcd_goto_position(0, 2);
+    lcd_write_string(PSTR("NEW HIGH SCORE"));
+    write_highscore(rank, 2);
+    lcd_goto_position(2, 6);
+    start_blinking();
+
+    while(1) {
+        if (animate) {
+            animate = 0;
+            pressed_buttons = read_buttons(&button_state);
+
+            if(pressed_buttons) {
+                stop_blinking();
+                alter_highscore_initials(pressed_buttons, rank, i);
+                if(move_highscore_cursor(pressed_buttons, &i))
+                    break;
+                write_highscore(rank, 2);
+                lcd_goto_position(2, 6+i);
+                start_blinking();
+            }
+        }
+    }
+
+    write_highscores();
+}
+
+void maybe_highscore() {
+    int8_t rank, shift, c;
+    for (rank = 0; rank < HIGH_SCORES; rank++)
+        if (score > highscores[rank].score) {
+            for (shift = HIGH_SCORES-1; shift > rank; shift--) {
+                for (c = 0; c < INITIALS; c++)
+                    highscores[shift].initials[c] =
+                        highscores[shift-1].initials[c];
+                highscores[shift].score = highscores[shift-1].score;
+            }
+            new_highscore(rank);
+            return;
+        }
+}
+
 void show_game_over() {
-    int delay = 0;
     // game is over (no more moves)
     stop_blinking();
     lcd_clear_and_home();
@@ -601,13 +808,10 @@ void show_game_over() {
     lcd_goto_position(3, 4);
     lcd_write_string(PSTR("score: "));
     lcd_write_int16(score);
-    while(delay < 300) {
-        if (animate) {
-            animate = 0;
-            // show game over for about 5 seconds
-            delay++;
-        }
-    }
+    simple_delay(300);
+    
+    maybe_highscore();
+    show_highscores();
 }
 
 int main() {
@@ -621,6 +825,7 @@ int main() {
     boot_timer();
     boot_adc();
     srand(random_seed_from_ADC());
+    validate_highscores();
     sei(); //enable interrupts
 
     while(1) {
