@@ -72,15 +72,6 @@ ISR(TIMER0_COMPA_vect) {
     animate = 1;
 }
 
-void simple_delay(int clicks) {
-    while (clicks > 0) {
-        if (animate) {
-            animate = 0;
-            clicks--;
-        }
-    }
-}
-
 // get the LCD setup at boot
 void boot_lcd() {
     lcd_init();
@@ -136,12 +127,6 @@ void boot_timer() {
     TIMSK0 |= (1<<OCIE0A);
 }
 
-// clear out all state for the button reader
-void clear_button_state(struct button_states* state) {
-    state->stable = 0;
-    state->last_read = 0;
-}
-
 // check the state of the buttons, returns a mask of
 // what buttons are now pushed that weren't before
 uint8_t read_buttons(struct button_states* state) {
@@ -161,6 +146,29 @@ uint8_t read_buttons(struct button_states* state) {
 
     // reply with newly-pushed buttons
     return newly;
+}
+
+// clear out all state for the button reader
+void clear_button_state(struct button_states* state) {
+    state->stable = 0;
+    state->last_read = 0;
+    // throw away buttons already pressed
+    read_buttons(state);
+    read_buttons(state);
+}
+
+void simple_delay(int clicks) {
+    struct button_states button_state;
+    clear_button_state(&button_state);
+
+    while (clicks > 0) {
+        if (animate) {
+            animate = 0;
+            clicks--;
+            if (read_buttons(&button_state) & B_SELECT)
+                break; // skip duration if Select is pushed
+        }
+    }
 }
 
 // handle any directional button pushes
