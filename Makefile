@@ -1,7 +1,7 @@
 GCCFLAGS=-g -Os -Wall -mmcu=atmega168 
 LINKFLAGS=-Wl,-u,vfprintf -lprintf_flt -Wl,-u,vfscanf -lscanf_flt -lm
 AVRDUDEFLAGS=-c avr109 -p m168 -b 115200 -P /dev/cu.PL2303-0000101D
-LINKOBJECTS=../libnerdkits/delay.o ../libnerdkits/lcd.o ../libnerdkits/uart.o
+LINKOBJECTS=../libnerdkits/delay.o ../libnerdkits/lcd.o
 
 all:	blockgame-upload
 
