@@ -801,11 +801,9 @@ void show_game_over() {
     // game is over (no more moves)
     stop_blinking();
     lcd_clear_and_home();
-    lcd_goto_position(1, 8);
-    lcd_write_string(PSTR("GAME"));
-    lcd_goto_position(2, 8);
-    lcd_write_string(PSTR("OVER"));
-    lcd_goto_position(3, 4);
+    lcd_goto_position(0, 6);
+    lcd_write_string(PSTR("GAME OVER"));
+    lcd_goto_position(2, 4);
     lcd_write_string(PSTR("score: "));
     lcd_write_int16(score);
     simple_delay(300);
