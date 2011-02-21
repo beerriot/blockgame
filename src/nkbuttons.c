@@ -7,10 +7,10 @@
 
 #include <avr/pgmspace.h>
 
-#include "buttons.h"
+#include "nkbuttons.h"
 
 // get the input pins setup at boot
-void boot_pins() {
+void nkbuttons_init() {
     // Set the 6 pins to input mode - four directions + select
     DDRC &= ~(B_LEFT|B_DOWN|B_UP|B_RIGHT|B_SELECT);
 	  
@@ -20,7 +20,7 @@ void boot_pins() {
 
 // check the state of the buttons, returns a mask of
 // what buttons are now pushed that weren't before
-uint8_t read_buttons(struct button_states* state) {
+uint8_t nkbuttons_read(struct nkbuttons* state) {
     // get a fresh read
     uint8_t fresh = ~PINC & (B_LEFT|B_DOWN|B_UP|B_RIGHT|B_SELECT);
 
@@ -40,11 +40,10 @@ uint8_t read_buttons(struct button_states* state) {
 }
 
 // clear out all state for the button reader
-void clear_button_state(struct button_states* state) {
+void nkbuttons_clear(struct nkbuttons* state) {
     state->stable = 0;
     state->last_read = 0;
     // throw away buttons already pressed
-    read_buttons(state);
-    read_buttons(state);
+    nkbuttons_read(state);
+    nkbuttons_read(state);
 }
-

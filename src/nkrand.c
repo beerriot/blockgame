@@ -9,7 +9,7 @@
 
 #include "nkrand.h"
 
-void boot_adc() {
+void nkrand_init() {
     // set analog to digital converter
     // for external reference (5v), single ended input ADC0
     ADMUX = 0;
@@ -23,7 +23,7 @@ void boot_adc() {
     ADCSRA |= (1<<ADSC);
 }
  
-uint8_t adc_get_next_bit() {
+uint8_t nkrand_next_bit() {
     // Lowest bit from ADC is the one most likely to change due to minute
     // variations in temperature as measured by LM37 and noise in power
     // supply.  Noise is generally a bad thing, but in our case,
@@ -49,7 +49,7 @@ uint8_t adc_get_next_bit() {
 }
  
 // Generate and return a random value.
-uint16_t random_seed_from_ADC() {
+uint16_t nkrand_seed() {
     uint16_t seed = 0;
     int8_t i;
  
@@ -59,7 +59,7 @@ uint16_t random_seed_from_ADC() {
     // and do it 100 times to mix things up really well.
     for (i = 0; i < 100; i++) {
         // XOR the seed with the random bit from ADC shifted
-        seed ^= (adc_get_next_bit() << (i%16));
+        seed ^= (nkrand_next_bit() << (i%16));
     }
     return seed;
 }

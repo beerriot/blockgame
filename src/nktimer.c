@@ -9,8 +9,8 @@
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 
-#include "timer.h"
-#include "buttons.h"
+#include "nktimer.h"
+#include "nkbuttons.h"
 
 // wheter or not the animate timer has clicked
 volatile int animatev = 0;
@@ -21,7 +21,7 @@ ISR(TIMER0_COMPA_vect) {
 }
 
 // configure the animation timer at boot
-void boot_timer(int freq) {
+void nktimer_init(int freq) {
     // Clear Timer on Compare Match of OCRA
     TCCR0A |= (1<<WGM01);
 
@@ -39,7 +39,7 @@ void boot_timer(int freq) {
     TIMSK0 |= (1<<OCIE0A);
 }
 
-uint8_t animate() {
+uint8_t nktimer_animate() {
     if (animatev) {
         animatev = 0;
         return 1;
@@ -47,14 +47,14 @@ uint8_t animate() {
     return 0;
 }
 
-void simple_delay(int clicks) {
-    struct button_states button_state;
-    clear_button_state(&button_state);
+void nktimer_simple_delay(int clicks) {
+    struct nkbuttons button_state;
+    nkbuttons_clear(&button_state);
 
     while (clicks > 0) {
-        if (animate()) {
+        if (nktimer_animate()) {
             clicks--;
-            if (read_buttons(&button_state) & B_SELECT)
+            if (nkbuttons_read(&button_state) & B_SELECT)
                 break; // skip duration if Select is pushed
         }
     }

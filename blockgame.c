@@ -11,11 +11,11 @@
 
 #include "lcd.h" //add nerdkits-provided library
 
-#include "buttons.h"
-#include "eeprom.h"
+#include "nkbuttons.h"
+#include "nkeeprom.h"
 #include "nkrand.h"
 #include "nklcd.h"
-#include "timer.h"
+#include "nktimer.h"
 
 // size of the game board
 #define MAX_WIDTH 20
@@ -270,7 +270,7 @@ int fill_spaces() {
 void animate_space_fill() {
     int spaces = 1, move = 0;
     while(spaces) {
-        if (animate()) {
+        if (nktimer_animate()) {
             if(move > 14) {
                 move = 0;
                 spaces = fill_spaces();
@@ -351,9 +351,9 @@ void prompt_params() {
     int ready = 0, prompt = 0;
     uint8_t pressed_buttons;
     int *field, min, max;
-    struct button_states button_state;
-    clear_button_state(&button_state);
-    stop_blinking();
+    struct nkbuttons button_state;
+    nkbuttons_clear(&button_state);
+    nklcd_stop_blinking();
     lcd_clear_and_home();
 
     lcd_goto_position(0, 3);
@@ -373,8 +373,8 @@ void prompt_params() {
     lcd_write_string(PSTR("start"));
 
     while(!ready) {
-        if (animate()) {
-            pressed_buttons = read_buttons(&button_state);
+        if (nktimer_animate()) {
+            pressed_buttons = nkbuttons_read(&button_state);
             if(pressed_buttons) {
                 if (pressed_buttons & B_SELECT && prompt == 3) {
                     ready = 1;
@@ -416,13 +416,13 @@ void play_game() {
     // row and column of the cursor
     struct point cursor;
     // read state
-    struct button_states button_state;
+    struct nkbuttons button_state;
     // latest new presses
     uint8_t pressed_buttons;
     // selection state
     struct point selection;
 
-    clear_button_state(&button_state);
+    nkbuttons_clear(&button_state);
     cursor.row = 0;
     cursor.column = 0;
     invalidate_selection(&selection);
@@ -432,22 +432,22 @@ void play_game() {
     animate_clear_sets();
     score = 0; // no points for tiles removed before play starts
     lcd_goto_position(cursor.row, cursor.column);
-    start_blinking();
+    nklcd_start_blinking();
     int8_t move_exists = valid_move_exists();
     // now let play begin
     while(move_exists) {
-        if (animate()) {
-            pressed_buttons = read_buttons(&button_state);
+        if (nktimer_animate()) {
+            pressed_buttons = nkbuttons_read(&button_state);
 
             if(pressed_buttons) {
-                stop_blinking();
+                nklcd_stop_blinking();
                 move_cursor(pressed_buttons, &cursor);
                 if(do_select(pressed_buttons, cursor, &selection)) {
                     animate_clear_sets();
                     move_exists = valid_move_exists();
                 }
                 lcd_goto_position(cursor.row, cursor.column);
-                start_blinking();
+                nklcd_start_blinking();
             }
         }
     }
@@ -464,12 +464,12 @@ uint8_t highscore_checksum() {
 uint8_t read_highscores() {
     uint8_t x, s, c;
     cli(); // disable interrupts
-    read_eeprom_bytes((unsigned char*)&highscores,
-                      0,
-                      HIGH_SCORES*sizeof(struct highscore));
-    read_eeprom_bytes(&x,
-                      HIGH_SCORES*sizeof(struct highscore),
-                      1);
+    nkeeprom_read_bytes((unsigned char*)&highscores,
+                        0,
+                        HIGH_SCORES*sizeof(struct highscore));
+    nkeeprom_read_bytes(&x,
+                        HIGH_SCORES*sizeof(struct highscore),
+                        1);
     sei();
     for (s = 0; s < HIGH_SCORES; s++)
         for (c = 0; c < INITIALS; c++)
@@ -492,12 +492,12 @@ void write_highscores() {
     uint8_t x;
     cli(); //disable interrupts
     x = highscore_checksum();
-    write_eeprom_bytes((unsigned char*)&highscores,
-                       0,
-                       HIGH_SCORES*sizeof(struct highscore));
-    write_eeprom_bytes((unsigned char*)&x,
-                       HIGH_SCORES*sizeof(struct highscore),
-                       1);
+    nkeeprom_write_bytes((unsigned char*)&highscores,
+                         0,
+                         HIGH_SCORES*sizeof(struct highscore));
+    nkeeprom_write_bytes((unsigned char*)&x,
+                         HIGH_SCORES*sizeof(struct highscore),
+                         1);
     sei();
 }
 
@@ -521,14 +521,14 @@ void show_highscores() {
     int s;
     // game is over (no more moves)
     lcd_clear_and_home();
-    stop_blinking();
+    nklcd_stop_blinking();
     lcd_goto_position(0, 5);
     lcd_write_string(PSTR("HIGH SCORES"));
     for (s = 0; s < HIGH_SCORES; s++) {
         write_highscore(s, 1+s);
     }
 
-    simple_delay(300);
+    nktimer_simple_delay(300);
 }
 
 void alter_highscore_initials(uint8_t buttons, int rank, int i) {
@@ -564,9 +564,9 @@ int move_highscore_cursor(uint8_t buttons, int* i) {
 
 void new_highscore(int rank) {
     int i=0, c;
-    struct button_states button_state;
+    struct nkbuttons button_state;
     uint8_t pressed_buttons;
-    clear_button_state(&button_state);
+    nkbuttons_clear(&button_state);
     for (c = 0; c < INITIALS; c++)
         highscores[rank].initials[c] = 'a';
     highscores[rank].score = score;
@@ -576,20 +576,20 @@ void new_highscore(int rank) {
     lcd_write_string(PSTR("NEW HIGH SCORE"));
     write_highscore(rank, 2);
     lcd_goto_position(2, 6);
-    start_blinking();
+    nklcd_start_blinking();
 
     while(1) {
-        if (animate()) {
-            pressed_buttons = read_buttons(&button_state);
+        if (nktimer_animate()) {
+            pressed_buttons = nkbuttons_read(&button_state);
 
             if(pressed_buttons) {
-                stop_blinking();
+                nklcd_stop_blinking();
                 alter_highscore_initials(pressed_buttons, rank, i);
                 if(move_highscore_cursor(pressed_buttons, &i))
                     break;
                 write_highscore(rank, 2);
                 lcd_goto_position(2, 6+i);
-                start_blinking();
+                nklcd_start_blinking();
             }
         }
     }
@@ -614,14 +614,14 @@ void maybe_highscore() {
 
 void show_game_over() {
     // game is over (no more moves)
-    stop_blinking();
+    nklcd_stop_blinking();
     lcd_clear_and_home();
     lcd_goto_position(0, 6);
     lcd_write_string(PSTR("GAME OVER"));
     lcd_goto_position(2, 4);
     lcd_write_string(PSTR("score: "));
     lcd_write_int16(score);
-    simple_delay(300);
+    nktimer_simple_delay(300);
     
     maybe_highscore();
     show_highscores();
@@ -633,11 +633,11 @@ int main() {
     game.height = MAX_HEIGHT;
     game.variety = 5;
 
-    boot_lcd();
-    boot_pins();
-    boot_timer(60);
-    boot_adc();
-    srand(random_seed_from_ADC());
+    nklcd_init();
+    nkbuttons_init();
+    nktimer_init(60);
+    nkrand_init();
+    srand(nkrand_seed());
     validate_highscores();
     sei(); //enable interrupts
 

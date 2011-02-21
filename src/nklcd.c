@@ -11,17 +11,17 @@
 #include "nklcd.h"
 
 // get the LCD setup at boot
-void boot_lcd() {
+void nklcd_init() {
     lcd_init();
     lcd_home();
 }
 
-void start_blinking() {
+void nklcd_start_blinking() {
     lcd_set_type_command();
     lcd_write_byte(0x0F);
 }
 
-void stop_blinking() {
+void nklcd_stop_blinking() {
     lcd_set_type_command();
     lcd_write_byte(0x0C);
 }
