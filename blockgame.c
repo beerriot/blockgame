@@ -6,19 +6,18 @@
 #define F_CPU 14745600
 
 #include <stdlib.h>
-
-#include <avr/interrupt.h>
-#include <avr/pgmspace.h>
 #include <inttypes.h>
 
-#include "../libnerdkits/lcd.h"
+#include <avr/pgmspace.h>
+#include <avr/interrupt.h>
 
-// pin definitions for buttons
-#define B_LEFT   (1<<PC0)
-#define B_DOWN   (1<<PC1)
-#define B_UP     (1<<PC2)
-#define B_RIGHT  (1<<PC3)
-#define B_SELECT (1<<PC4)
+#include "lcd.h" //add nerdkits-provided library
+
+#include "buttons.h"
+#include "eeprom.h"
+#include "nkrand.h"
+#include "nklcd.h"
+#include "timer.h"
 
 // size of the game board
 #define MAX_WIDTH 20
@@ -27,14 +26,6 @@
 // number of high scores we keep around
 #define HIGH_SCORES 3
 #define INITIALS 3
-
-// living state for the button reader
-struct button_states {
-    // the stable state (repeated agreeing reads) of the buttons
-    uint8_t stable;
-    // the most recent read of the buttons
-    uint8_t last_read;
-};
 
 struct {
     // size of the board
@@ -64,30 +55,6 @@ struct point {
     int8_t meta;
 };
 
-// wheter or not the animate timer has clicked
-volatile int animate = 0;
-
-ISR(TIMER0_COMPA_vect) {
-    // time to cycle animations
-    animate = 1;
-}
-
-// get the LCD setup at boot
-void boot_lcd() {
-    lcd_init();
-    lcd_home();
-}
-
-void start_blinking() {
-    lcd_set_type_command();
-    lcd_write_byte(0x0F);
-}
-
-void stop_blinking() {
-    lcd_set_type_command();
-    lcd_write_byte(0x0C);
-}
-
 char random_piece() {
     return 'a'+(rand() % game.variety);
 }
@@ -98,77 +65,6 @@ void boot_board() {
     for (r = 0; r < game.height; r++)
         for (c = 0; c < game.width; c++)
             game.board[r][c] = ' ';
-}
-
-// get the input pins setup at boot
-void boot_pins() {
-    // Set the 6 pins to input mode - four directions + select
-    DDRC &= ~(B_LEFT|B_DOWN|B_UP|B_RIGHT|B_SELECT);
-	  
-    // turn on the internal resistors for the pins
-    PORTC |= (B_LEFT|B_DOWN|B_UP|B_RIGHT|B_SELECT);
-}
-
-// configure the animation timer at boot
-void boot_timer() {
-    // Clear Timer on Compare Match of OCRA
-    TCCR0A |= (1<<WGM01);
-
-    // system clock is ~1.47Mhz
-    // 14740000/1024 = 14395
-    // 14395/60 = 240 (60Hz being target frame rate)
-    // choose clock source as system/prescaler1024
-    TCCR0B |= (1<<CS02) | (1<<CS00);
-
-    // choose the value for Output Compare A
-    OCR0A = 240;
-  
-    // endable Timer Output Compare Match A Interrupt 0
-    TIMSK0 |= (1<<OCIE0A);
-}
-
-// check the state of the buttons, returns a mask of
-// what buttons are now pushed that weren't before
-uint8_t read_buttons(struct button_states* state) {
-    // get a fresh read
-    uint8_t fresh = ~PINC & (B_LEFT|B_DOWN|B_UP|B_RIGHT|B_SELECT);
-
-    // factor out bounces by sampling twice before determining
-    // what is actually pressed
-    uint8_t pressed = state->last_read & fresh;
-
-    // find out what buttons are pushed now that weren't before
-    uint8_t newly = (state->stable ^ pressed) & pressed;
-
-    // update state
-    state->last_read = fresh;
-    state->stable = pressed;
-
-    // reply with newly-pushed buttons
-    return newly;
-}
-
-// clear out all state for the button reader
-void clear_button_state(struct button_states* state) {
-    state->stable = 0;
-    state->last_read = 0;
-    // throw away buttons already pressed
-    read_buttons(state);
-    read_buttons(state);
-}
-
-void simple_delay(int clicks) {
-    struct button_states button_state;
-    clear_button_state(&button_state);
-
-    while (clicks > 0) {
-        if (animate) {
-            animate = 0;
-            clicks--;
-            if (read_buttons(&button_state) & B_SELECT)
-                break; // skip duration if Select is pushed
-        }
-    }
 }
 
 // handle any directional button pushes
@@ -376,8 +272,7 @@ int fill_spaces() {
 void animate_space_fill() {
     int spaces = 1, move = 0;
     while(spaces) {
-        if (animate) {
-            animate = 0;
+        if (animate()) {
             if(move > 14) {
                 move = 0;
                 spaces = fill_spaces();
@@ -396,61 +291,6 @@ void animate_clear_sets() {
         write_board();
         animate_space_fill();
     } while (mark_sets());
-}
-
-void boot_adc() {
-    // set analog to digital converter
-    // for external reference (5v), single ended input ADC0
-    ADMUX = 0;
- 
-    // set analog to digital converter
-    // to be enabled, with a clock prescale of 1/128
-    // so that the ADC clock runs at 115.2kHz.
-    ADCSRA = (1<<ADEN) | (1<<ADPS2) | (1<<ADPS1) | (1<<ADPS0);
- 
-    // fire a conversion just to get the ADC warmed up
-    ADCSRA |= (1<<ADSC);
-}
- 
-uint8_t adc_get_next_bit() {
-    // Lowest bit from ADC is the one most likely to change due to minute
-    // variations in temperature as measured by LM37 and noise in power
-    // supply.  Noise is generally a bad thing, but in our case,
-    // the more - the better!  This function reads just the lowest bit
-    // from ADC and discards the rest.
- 
-    // Wait until ADSC goes low (conversion completed).
-    while (ADCSRA & (1<<ADSC)) { }
- 
-    // Read ADCL (AD low byte).  This one has the bit that we want.
-    // (Mike mentions in tempsensor.c that ADCL has to be read first,
-    // ATmega doc PDF page 259).
-    uint16_t adc = ADCL;
-    // read ADCH anyway to reset for the next conversion
-    // do "something" with it to prevent compiler optimization
-    adc ^= ADCH;
- 
-    // Start the next conversion.
-    ADCSRA |= (1<<ADSC);
- 
-    // Return the lowest bit of ADCL.
-    return adc & 1;
-}
- 
-// Generate and return a random value.
-uint16_t random_seed_from_ADC() {
-    uint16_t seed = 0;
-    int8_t i;
- 
-    // 'seed' is the value we are going to generate.
-    // Starting with zeros in all 16 bits of the 16-bit unsigned integer,
-    // we XOR the bits one by one with a highly volatile bit value from ADC,
-    // and do it 100 times to mix things up really well.
-    for (i = 0; i < 100; i++) {
-        // XOR the seed with the random bit from ADC shifted
-        seed ^= (adc_get_next_bit() << (i%16));
-    }
-    return seed;
 }
 
 void clear_marks() {
@@ -535,9 +375,7 @@ void prompt_params() {
     lcd_write_string(PSTR("start"));
 
     while(!ready) {
-        if (animate) {
-            animate = 0;
-
+        if (animate()) {
             pressed_buttons = read_buttons(&button_state);
             if(pressed_buttons) {
                 if (pressed_buttons & B_SELECT && prompt == 3) {
@@ -600,8 +438,7 @@ void play_game() {
     int8_t move_exists = valid_move_exists();
     // now let play begin
     while(move_exists) {
-        if (animate) {
-            animate = 0;
+        if (animate()) {
             pressed_buttons = read_buttons(&button_state);
 
             if(pressed_buttons) {
@@ -616,33 +453,6 @@ void play_game() {
             }
         }
     }
-}
-
-char read_eeprom_byte(uint16_t address) {
-    // wait for completion of previous write)
-    while (EECR & (1<<EEPE)) {}
-    EEAR = address; //setup address
-    EECR |= (1<<EERE); //start eeprom read
-    return EEDR; // return data from register
-}
-
-void write_eeprom_byte(char byte, uint16_t address) {
-    // wait for completion of previous write
-    while (EECR & (1<<EEPE)) {}
-    EEAR = address; //setup address
-    EEDR = byte; //setup data
-    EECR |= (1<<EEMPE); //enable writes
-    EECR |= (1<<EEPE); //start write
-}
-
-void read_eeprom_bytes(unsigned char* dest, int offset, int count) {
-    for (; count >= 0; count--, dest++, offset++) 
-        *dest = read_eeprom_byte(offset);
-}
-
-void write_eeprom_bytes(unsigned char* src, int offset, int count) {
-    for(; count >= 0; count--, src++, offset++)
-        write_eeprom_byte(*src, offset);
 }
 
 uint8_t highscore_checksum() {
@@ -771,8 +581,7 @@ void new_highscore(int rank) {
     start_blinking();
 
     while(1) {
-        if (animate) {
-            animate = 0;
+        if (animate()) {
             pressed_buttons = read_buttons(&button_state);
 
             if(pressed_buttons) {
