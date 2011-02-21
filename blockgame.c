@@ -3,8 +3,6 @@
 // copyright 2011 Bryan Fink
 // license: see LICENSE.txt
 
-#define F_CPU 14745600
-
 #include <stdlib.h>
 #include <inttypes.h>
 
@@ -637,7 +635,7 @@ int main() {
 
     boot_lcd();
     boot_pins();
-    boot_timer();
+    boot_timer(60);
     boot_adc();
     srand(random_seed_from_ADC());
     validate_highscores();

@@ -21,18 +21,19 @@ ISR(TIMER0_COMPA_vect) {
 }
 
 // configure the animation timer at boot
-void boot_timer() {
+void boot_timer(int freq) {
     // Clear Timer on Compare Match of OCRA
     TCCR0A |= (1<<WGM01);
 
     // system clock is ~1.47Mhz
     // 14740000/1024 = 14395
-    // 14395/60 = 240 (60Hz being target frame rate)
     // choose clock source as system/prescaler1024
     TCCR0B |= (1<<CS02) | (1<<CS00);
 
+    // for example, 60Hz target:
+    // 14395/60 = 240
     // choose the value for Output Compare A
-    OCR0A = 240;
+    OCR0A = (F_CPU / 1024) / freq;
   
     // endable Timer Output Compare Match A Interrupt 0
     TIMSK0 |= (1<<OCIE0A);
