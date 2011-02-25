@@ -16,20 +16,11 @@
 #include "nklcd.h"
 #include "nktimer.h"
 
+#include "bggame.h"
+#include "bgmenu.h"
 #include "bghighscore.h"
 
-// size of the game board
-#define MAX_WIDTH 20
-#define MAX_HEIGHT 4
-
-struct {
-    // size of the board
-    int width, height;
-    // number of unique piece types
-    int variety;
-    // board state (with enough room for the larges board)
-    char board[MAX_HEIGHT][MAX_WIDTH];
-} game;
+struct game game;
 
 uint16_t score;
 
@@ -315,92 +306,6 @@ int8_t valid_move_exists() {
     return valid;
 }
 
-void fb_prompt(int row, char left, char right) {
-    lcd_goto_position(row, 10);
-    lcd_write_data(left);
-    lcd_goto_position(row, 16);
-    lcd_write_data(right);
-}
-void focus_prompt(int row) {
-    fb_prompt(row, 0x7e, 0x7f);
-}
-
-void blur_prompt(int row) {
-    fb_prompt(row, ' ', ' ');
-}
-
-void write_prompt(int row, int val) {
-    lcd_goto_position(row, 12);
-    if (val < 10)
-        lcd_write_data(' ');
-    lcd_write_int16(val);
-}
-
-void prompt_params() {
-    int ready = 0, prompt = 0;
-    uint8_t pressed_buttons;
-    int *field, min, max;
-    struct nkbuttons button_state;
-    nkbuttons_clear(&button_state);
-    nklcd_stop_blinking();
-    lcd_clear_and_home();
-
-    lcd_goto_position(0, 3);
-    lcd_write_string(PSTR("width:"));
-    write_prompt(0, game.width);
-    focus_prompt(0);
-
-    lcd_goto_position(1, 2);
-    lcd_write_string(PSTR("height:"));
-    write_prompt(1, game.height);
-
-    lcd_goto_position(2, 1);
-    lcd_write_string(PSTR("variety:"));
-    write_prompt(2, game.variety);
-
-    lcd_goto_position(3, 11);
-    lcd_write_string(PSTR("start"));
-
-    while(!ready) {
-        if (nktimer_animate()) {
-            pressed_buttons = nkbuttons_read(&button_state);
-            if(pressed_buttons) {
-                if (pressed_buttons & B_SELECT && prompt == 3) {
-                    ready = 1;
-                } else if (pressed_buttons & (B_UP | B_DOWN | B_SELECT)) {
-                    blur_prompt(prompt);
-                    if (pressed_buttons & B_UP) {
-                        prompt--;
-                        if (prompt < 0) prompt = 3;
-                    } else {
-                        prompt++;
-                        if (prompt > 3) prompt = 0;
-                    }
-                    focus_prompt(prompt);
-                } else {
-                    switch (prompt) {
-                    case 0: field = &game.width;
-                        min=10; max=MAX_WIDTH;
-                        break;
-                    case 1: field = &game.height;
-                        min=3; max=MAX_HEIGHT;
-                        break;
-                    default: field = &game.variety;
-                        min=5; max=26;
-                    }
-                    if (pressed_buttons & B_RIGHT &&
-                        *field < max)
-                        *field = *field+1;
-                    else if (pressed_buttons & B_LEFT &&
-                             *field > min)
-                        *field = *field-1;
-                    write_prompt(prompt, *field);
-                }
-            }
-        }
-    }
-}
-
 void play_game() {
     // row and column of the cursor
     struct point cursor;
@@ -472,7 +377,7 @@ int main() {
     sei(); //enable interrupts
 
     while(1) {
-        prompt_params();
+        bgmenu_display(&game);
         play_game();
         show_game_over();
     }
