@@ -27,11 +27,11 @@ void nkeeprom_write_byte(char byte, uint16_t address) {
 }
 
 void nkeeprom_read_bytes(unsigned char* dest, int offset, int count) {
-    for (; count >= 0; count--, dest++, offset++) 
+    for (; count > 0; count--, dest++, offset++) 
         *dest = nkeeprom_read_byte(offset);
 }
 
 void nkeeprom_write_bytes(unsigned char* src, int offset, int count) {
-    for(; count >= 0; count--, src++, offset++)
+    for(; count > 0; count--, src++, offset++)
         nkeeprom_write_byte(*src, offset);
 }
