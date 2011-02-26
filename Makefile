@@ -5,12 +5,12 @@ LINKOBJECTS=../libnerdkits/delay.o ../libnerdkits/lcd.o
 
 all:	blockgame-upload
 
-blockgame.hex: blockgame.c src/nkbuttons.c src/nkeeprom.c src/nkrand.c src/nklcd.c src/nktimer.c src/bghighscore.c src/bgmenu.c
+blockgame.hex: blockgame.c src/nkbuttons.c src/nkeeprom.c src/nkrand.c src/nklcd.c src/nktimer.c src/bghighscore.c src/bgmenu.c src/bggame.c
 	make -C ../libnerdkits
 	avr-gcc ${GCCFLAGS} ${LINKFLAGS} -o blockgame.o \
 		blockgame.c src/nkbuttons.c src/nkeeprom.c src/nkrand.c \
 		src/nklcd.c src/nktimer.c src/bghighscore.c \
-		src/bgmenu.c ${LINKOBJECTS}
+		src/bgmenu.c src/bggame.c ${LINKOBJECTS}
 	avr-objcopy -j .text -O ihex blockgame.o blockgame.hex
 
 blockgame.ass:	blockgame.hex
