@@ -47,8 +47,8 @@ uint8_t bghighscore_read() {
     sei();
     for (s = 0; s < HIGH_SCORES; s++)
         for (c = 0; c < INITIALS; c++)
-            if (highscores[s].initials[c] <= 'a' ||
-                highscores[s].initials[c] >= 'z')
+            if (highscores[s].initials[c] < 'a' ||
+                highscores[s].initials[c] > 'z')
                 return 0;
     return x == bghighscore_checksum();
 }
