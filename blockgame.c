@@ -20,9 +20,9 @@
 #include "bgmenu.h"
 #include "bghighscore.h"
 
-struct game game;
-
 int main() {
+    struct game game;
+
     // the playing board
     game.width = MAX_WIDTH;
     game.height = MAX_HEIGHT;
