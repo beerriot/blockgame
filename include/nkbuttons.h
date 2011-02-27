@@ -14,6 +14,11 @@ struct nkbuttons {
     uint8_t stable;
     // the most recent read of the buttons
     uint8_t last_read;
+    // number of times stable state has been read
+    uint8_t stable_count;
+    // whether or not key triggers are currently repeats
+    // (smaller delay between firings after first repeat)
+    uint8_t is_repeat;
 };
 
 void nkbuttons_init();

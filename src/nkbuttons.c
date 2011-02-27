@@ -27,13 +27,23 @@ uint8_t nkbuttons_read(struct nkbuttons* state) {
     // factor out bounces by sampling twice before determining
     // what is actually pressed
     uint8_t pressed = state->last_read & fresh;
-
-    // find out what buttons are pushed now that weren't before
-    uint8_t newly = (state->stable ^ pressed) & pressed;
-
-    // update state
     state->last_read = fresh;
-    state->stable = pressed;
+
+    uint8_t newly = 0;
+    if (state->stable == pressed) {
+        if (++state->stable_count > (state->is_repeat ? 14 : 30)) {
+            state->stable_count = 0;
+            state->is_repeat = 1;
+            // trigger a key repeat, if it's still held down
+            newly = pressed;
+        }
+    } else {
+        state->stable_count = 0;
+        state->is_repeat = 0;
+        // find out what buttons are pushed now that weren't before
+        newly = (state->stable ^ pressed) & pressed;
+        state->stable = pressed;
+    }
 
     // reply with newly-pushed buttons
     return newly;
@@ -43,6 +53,8 @@ uint8_t nkbuttons_read(struct nkbuttons* state) {
 void nkbuttons_clear(struct nkbuttons* state) {
     state->stable = 0;
     state->last_read = 0;
+    state->stable_count = 0;
+    state->is_repeat = 0;
     // throw away buttons already pressed
     nkbuttons_read(state);
     nkbuttons_read(state);
