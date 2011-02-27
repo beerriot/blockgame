@@ -243,7 +243,7 @@ void bggame_animate_space_fill(struct game *game) {
     int spaces = 1, move = 0;
     while(spaces) {
         if (nktimer_animate()) {
-            if(move > 14) {
+            if(move > 7) {
                 move = 0;
                 spaces = bggame_fill_spaces(game);
                 bggame_write_board(*game);
