@@ -37,8 +37,8 @@ void bgmenu_write_prompt(int row, int val) {
     lcd_write_int16(val);
 }
 
-void bgmenu_display(struct game *game) {
-    int ready = 0, prompt = 0;
+uint8_t bgmenu_display(struct game *game) {
+    int ready = 0, prompt = 0, inactivity = 0;
     uint8_t pressed_buttons;
     int *field, min, max;
     struct nkbuttons button_state;
@@ -66,6 +66,7 @@ void bgmenu_display(struct game *game) {
         if (nktimer_animate()) {
             pressed_buttons = nkbuttons_read(&button_state);
             if(pressed_buttons) {
+                inactivity = 0;
                 if (pressed_buttons & B_SELECT && prompt == 3) {
                     ready = 1;
                 } else if (pressed_buttons & (B_UP | B_DOWN | B_SELECT)) {
@@ -97,8 +98,11 @@ void bgmenu_display(struct game *game) {
                         *field = *field-1;
                     bgmenu_write_prompt(prompt, *field);
                 }
+            } else if (++inactivity > 600) {
+                return 0; // leave menu for "screen saver" after 10sec
             }
         }
     }
+    return 1;
 }
 

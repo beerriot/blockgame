@@ -5,5 +5,5 @@ void bgmenu_forb(int row, uint8_t focus);
 void bgmenu_focus(int row);
 void bgmenu_blur(int row);
 void bgmenu_write_prompt(int row, int val);
-void bgmenu_display(struct game *game);
+uint8_t bgmenu_display(struct game *game);
 #endif
