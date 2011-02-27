@@ -1,20 +1,26 @@
-GCCFLAGS=-g -Os -Wall -mmcu=atmega168 -Iinclude -I../libnerdkits
-LINKFLAGS=
+VPATH=src
+CC=avr-gcc
+LIBNERDKITS=../libnerdkits
+CFLAGS=-g -Os -Wall -mmcu=atmega168 -Iinclude -I$(LIBNERDKITS)
 AVRDUDEFLAGS=-c avr109 -p m168 -b 115200 -P /dev/cu.PL2303-0000101D
-LINKOBJECTS=../libnerdkits/delay.o ../libnerdkits/lcd.o
+NKOBJECTS=$(LIBNERDKITS)/delay.o $(LIBNERDKITS)/lcd.o
+OBJECTS=bggame.o bgmenu.o bghighscore.o \
+	nktimer.o nklcd.o nkrand.o nkeeprom.o nkbuttons.o
 
-all:	blockgame-upload
+all: blockgame.hex
 
-blockgame.hex: blockgame.c src/nkbuttons.c src/nkeeprom.c src/nkrand.c src/nklcd.c src/nktimer.c src/bghighscore.c src/bgmenu.c src/bggame.c
-	make -C ../libnerdkits
-	avr-gcc ${GCCFLAGS} ${LINKFLAGS} -o blockgame.o \
-		blockgame.c src/nkbuttons.c src/nkeeprom.c src/nkrand.c \
-		src/nklcd.c src/nktimer.c src/bghighscore.c \
-		src/bgmenu.c src/bggame.c ${LINKOBJECTS}
-	avr-objcopy -j .text -O ihex blockgame.o blockgame.hex
+upload: all
+	avrdude $(AVRDUDEFLAGS) -U flash:w:blockgame.hex:a
 
-blockgame.ass:	blockgame.hex
-	avr-objdump -S -d blockgame.o > blockgame.ass
+blockgame.hex: blockgame
+	avr-objcopy -j .text -O ihex blockgame blockgame.hex
 
-blockgame-upload:	blockgame.hex
-	avrdude ${AVRDUDEFLAGS} -U flash:w:blockgame.hex:a
+blockgame: $(OBJECTS) blockgame.c
+	$(CC) $(CFLAGS) $^ -o blockgame $(NKOBJECTS)
+
+blockgame.ass:	blockgame
+	avr-objdump -S -d blockgame > blockgame.ass
+
+.PHONY: clean
+clean:
+	-rm *.o blockgame blockgame.hex blockgame.ass
