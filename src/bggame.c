@@ -351,7 +351,4 @@ void bggame_over(uint16_t score) {
     lcd_write_string(PSTR("score: "));
     lcd_write_int16(score);
     nktimer_simple_delay(300);
-    
-    bghighscore_maybe(score);
-    bghighscore_screen();
 }

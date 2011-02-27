@@ -40,6 +40,8 @@ int main() {
         bgmenu_display(&game);
         bggame_play(&game);
         bggame_over(game.score);
+        bghighscore_maybe(game.score);
+        bghighscore_screen();
     }
 
     return 0;
