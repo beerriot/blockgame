@@ -41,7 +41,7 @@ void nkbuttons_disable_interrupts() {
 
 // check the state of the buttons, returns a mask of
 // what buttons are now pushed that weren't before
-uint8_t nkbuttons_read(nkbuttons_t* state) {
+uint8_t nkbuttons_read(nkbuttons_t *state) {
     // get a fresh read
     uint8_t fresh = ~PINC & (B_LEFT|B_DOWN|B_UP|B_RIGHT|B_SELECT);
 
@@ -71,7 +71,7 @@ uint8_t nkbuttons_read(nkbuttons_t* state) {
 }
 
 // clear out all state for the button reader
-void nkbuttons_clear(nkbuttons_t* state) {
+void nkbuttons_clear(nkbuttons_t *state) {
     state->stable = 0;
     state->last_read = 0;
     state->stable_count = 0;

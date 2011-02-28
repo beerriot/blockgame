@@ -29,16 +29,16 @@ char bggame_random_piece(game_t game);
 void bggame_board_init(game_t *game);
 void bggame_move_cursor(game_t game,
                         uint8_t buttons_pushed,
-                        point_t* cursor);
+                        point_t *cursor);
 uint8_t bggame_are_neighbor_rowcols(int rc1, int rc2, int max);
 uint8_t bggame_are_neighbors(game_t game,
                              point_t p1,
                              point_t p2);
-void bggame_invalidate_selection(point_t* selection);
+void bggame_invalidate_selection(point_t *selection);
 uint8_t bggame_selection_is_active(point_t selection);
-void bggame_clear_selection(game_t *game, point_t* selection);
+void bggame_clear_selection(game_t *game, point_t *selection);
 void bggame_set_selection(game_t *game,
-                          point_t* selection,
+                          point_t *selection,
                           point_t cursor);
 int bggame_next_row(game_t game, int r);
 int bggame_next_column(game_t game, int c);
@@ -51,9 +51,9 @@ uint8_t bggame_select(game_t *game,
                       point_t cursor,
                       point_t *selection);
 void bggame_write_board(game_t game);
-int bggame_first_space(char* row, int width);
-void bggame_shift(char* row, int width, int start);
-int bggame_fill_spaces_row(game_t game, char* row);
+int bggame_first_space(char *row, int width);
+void bggame_shift(char *row, int width, int start);
+int bggame_fill_spaces_row(game_t game, char *row);
 int bggame_fill_spaces(game_t *game);
 void bggame_animate_space_fill(game_t *game);
 void bggame_animate_clear_sets(game_t *game);

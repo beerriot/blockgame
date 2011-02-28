@@ -21,7 +21,7 @@ void bghighscore_write();
 void bghighscore_display_line(int rank, int lcd_line);
 void bghighscore_screen();
 void bghighscore_alter_initials(uint8_t buttons, int rank, int i);
-int bghighscore_move_cursor(uint8_t buttons, int* i);
+int bghighscore_move_cursor(uint8_t buttons, int *i);
 void bghighscore_new(int rank, uint16_t score);
 void bghighscore_maybe(uint16_t score);
 

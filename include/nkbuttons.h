@@ -30,7 +30,7 @@ typedef struct {
 void nkbuttons_init();
 void nkbuttons_enable_interrupts();
 void nkbuttons_disable_interrupts();
-uint8_t nkbuttons_read(nkbuttons_t* state);
-void nkbuttons_clear(nkbuttons_t* state);
+uint8_t nkbuttons_read(nkbuttons_t *state);
+void nkbuttons_clear(nkbuttons_t *state);
 
 #endif

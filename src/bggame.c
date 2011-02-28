@@ -34,7 +34,7 @@ void bggame_board_init(game_t *game) {
 // handle any directional button pushes
 void bggame_move_cursor(game_t game,
                         uint8_t buttons_pushed,
-                        point_t* cursor) {
+                        point_t *cursor) {
     if (buttons_pushed & B_UP)
         cursor->row--;
     if (buttons_pushed & B_DOWN)
@@ -75,7 +75,7 @@ uint8_t bggame_are_neighbors(game_t game,
     return 0;
 }
 
-void bggame_invalidate_selection(point_t* selection) {
+void bggame_invalidate_selection(point_t *selection) {
     selection->meta = 0;
 }
 
@@ -83,7 +83,7 @@ uint8_t bggame_selection_is_active(point_t selection) {
     return selection.meta != 0;
 }
 
-void bggame_clear_selection(game_t *game, point_t* selection) {
+void bggame_clear_selection(game_t *game, point_t *selection) {
     if (bggame_selection_is_active(*selection))
         game->board[selection->row][selection->column] |= 0x20;
     lcd_goto_position(selection->row, selection->column);
@@ -92,7 +92,7 @@ void bggame_clear_selection(game_t *game, point_t* selection) {
 }
 
 void bggame_set_selection(game_t *game,
-                          point_t* selection,
+                          point_t *selection,
                           point_t cursor) {
     selection->row = cursor.row;
     selection->column = cursor.column;
@@ -209,7 +209,7 @@ void bggame_write_board(game_t game) {
     }
 }
 
-int bggame_first_space(char* row, int width) {
+int bggame_first_space(char *row, int width) {
     int c;
     for (c = 0; c < width; c++)
         if (row[c] == ' ')
@@ -217,12 +217,12 @@ int bggame_first_space(char* row, int width) {
     return c;
 }
 
-void bggame_shift(char* row, int width, int start) {
+void bggame_shift(char *row, int width, int start) {
     for (; start < (width-1); start++)
         row[start] = row[start+1];
 }
 
-int bggame_fill_spaces_row(game_t game, char* row) {
+int bggame_fill_spaces_row(game_t game, char *row) {
     int first_space = bggame_first_space(row, game.width);
     if (first_space < game.width) {
         bggame_shift(row, game.width, first_space);

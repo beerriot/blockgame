@@ -29,7 +29,7 @@ void bghighscore_init() {
 
 uint8_t bghighscore_checksum() {
     uint8_t i, x = 0;
-    unsigned char* hs = (unsigned char*)&highscores;
+    unsigned char *hs = (unsigned char*)&highscores;
     for (i = 0; i < HIGH_SCORES*sizeof(bghighscore_t); i++)
         x ^= *(hs+i);
     return x;
@@ -66,10 +66,10 @@ void bghighscore_write() {
     uint8_t x;
     cli(); //disable interrupts
     x = bghighscore_checksum();
-    nkeeprom_write_bytes((unsigned char*)&highscores,
+    nkeeprom_write_bytes((unsigned char *)&highscores,
                          0,
                          HIGH_SCORES*sizeof(bghighscore_t));
-    nkeeprom_write_bytes((unsigned char*)&x,
+    nkeeprom_write_bytes((unsigned char *)&x,
                          HIGH_SCORES*sizeof(bghighscore_t),
                          1);
     sei();
@@ -112,7 +112,7 @@ void alter_highscore_initials(uint8_t buttons, int rank, int i) {
     }
 }
 
-int bghighscore_move_cursor(uint8_t buttons, int* i) {
+int bghighscore_move_cursor(uint8_t buttons, int *i) {
     if (buttons & B_LEFT) {
         if (*i > 0)
             *i -= 1;
