@@ -14,6 +14,7 @@
 #include "nkbuttons.h"
 #include "nklcd.h"
 #include "nktimer.h"
+#include "nksleep.h"
 
 #include "bggame.h"
 #include "bghighscore.h"
@@ -309,6 +310,8 @@ void bggame_play(struct game *game) {
     uint8_t pressed_buttons;
     // selection state
     struct point selection;
+    // idle/sleep timer
+    uint16_t idle = 0;
 
     nkbuttons_clear(&button_state);
     cursor.row = 0;
@@ -328,6 +331,7 @@ void bggame_play(struct game *game) {
             pressed_buttons = nkbuttons_read(&button_state);
 
             if(pressed_buttons) {
+                idle = 0;
                 nklcd_stop_blinking();
                 bggame_move_cursor(*game, pressed_buttons, &cursor);
                 if(bggame_select(game, pressed_buttons, cursor, &selection)) {
@@ -335,6 +339,12 @@ void bggame_play(struct game *game) {
                     move_exists = bggame_valid_move_exists(*game);
                 }
                 lcd_goto_position(cursor.row, cursor.column);
+                nklcd_start_blinking();
+            } else if (++idle > 3600) {
+                // go to sleep after a minute of no activity
+                idle = 0;
+                nksleep_standby();
+                // display comes out of standby with blink disabled
                 nklcd_start_blinking();
             }
         }

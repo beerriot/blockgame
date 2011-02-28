@@ -35,9 +35,18 @@ void nktimer_init(int freq) {
     // choose the value for Output Compare A
     OCR0A = (F_CPU / 1024) / freq;
   
+    nktimer_resume();
+}
+
+void nktimer_resume() {
     // endable Timer Output Compare Match A Interrupt 0
     TIMSK0 |= (1<<OCIE0A);
 }
+
+void nktimer_pause() {
+    // disable Timer Output Compare Match A Interrupt 0
+    TIMSK0 &= ~(1<<OCIE0A);
+}    
 
 uint8_t nktimer_animate() {
     if (animatev) {

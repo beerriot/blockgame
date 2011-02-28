@@ -15,6 +15,7 @@
 #include "nkrand.h"
 #include "nklcd.h"
 #include "nktimer.h"
+#include "nksleep.h"
 
 #include "bggame.h"
 #include "bgmenu.h"
@@ -22,6 +23,8 @@
 
 int main() {
     struct game game;
+    // idle/sleep timer
+    uint8_t idle = 0;
 
     // the playing board
     game.width = MAX_WIDTH;
@@ -38,9 +41,15 @@ int main() {
 
     while(1) {
         if (bgmenu_display(&game)) {
+            idle = 0;
             bggame_play(&game);
             bggame_over(game.score);
             bghighscore_maybe(game.score);
+        } else if(++idle > 4) {
+            // go to sleep after cycling menu<->highscore
+            // without a game several times
+            idle = 0;
+            nksleep_standby();
         }
         bghighscore_screen();
     }

@@ -6,8 +6,13 @@
 // utilities for reading button states
 
 #include <avr/pgmspace.h>
+#include <avr/interrupt.h>
 
 #include "nkbuttons.h"
+
+ISR(PCINT1_vect) {
+    // only triggered when a button is used to wake up
+}
 
 // get the input pins setup at boot
 void nkbuttons_init() {
@@ -16,6 +21,22 @@ void nkbuttons_init() {
 	  
     // turn on the internal resistors for the pins
     PORTC |= (B_LEFT|B_DOWN|B_UP|B_RIGHT|B_SELECT);
+}
+
+void nkbuttons_enable_interrupts() {
+    // enable bin change mask registers
+    PCMSK1 |= (B_LEFT_INT|B_DOWN_INT|B_UP_INT|B_RIGHT_INT|B_SELECT_INT);
+
+    // enable Pin Change Interrupt 1
+    PCICR |= (1<<PCIE1);
+}
+
+void nkbuttons_disable_interrupts() {
+    // enable bin change mask registers
+    PCMSK1 &= ~(B_LEFT_INT|B_DOWN_INT|B_UP_INT|B_RIGHT_INT|B_SELECT_INT);
+
+    // enable Pin Change Interrupt 1
+    PCICR &= (1<<PCIE1);
 }
 
 // check the state of the buttons, returns a mask of

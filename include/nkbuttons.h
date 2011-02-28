@@ -8,6 +8,12 @@
 #define B_RIGHT  (1<<PC3)
 #define B_SELECT (1<<PC4)
 
+#define B_LEFT_INT   (1<<PCINT8)
+#define B_DOWN_INT   (1<<PCINT9)
+#define B_UP_INT     (1<<PCINT10)
+#define B_RIGHT_INT  (1<<PCINT11)
+#define B_SELECT_INT (1<<PCINT13)
+
 // living state for the button reader
 struct nkbuttons {
     // the stable state (repeated agreeing reads) of the buttons
@@ -22,6 +28,8 @@ struct nkbuttons {
 };
 
 void nkbuttons_init();
+void nkbuttons_enable_interrupts();
+void nkbuttons_disable_interrupts();
 uint8_t nkbuttons_read(struct nkbuttons* state);
 void nkbuttons_clear(struct nkbuttons* state);
 

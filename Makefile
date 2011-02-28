@@ -5,7 +5,7 @@ CFLAGS=-g -Os -Wall -mmcu=atmega168 -Iinclude -I$(LIBNERDKITS)
 AVRDUDEFLAGS=-c avr109 -p m168 -b 115200 -P /dev/cu.PL2303-0000101D
 NKOBJECTS=$(LIBNERDKITS)/delay.o $(LIBNERDKITS)/lcd.o
 OBJECTS=bggame.o bgmenu.o bghighscore.o \
-	nktimer.o nklcd.o nkrand.o nkeeprom.o nkbuttons.o
+	nktimer.o nklcd.o nkrand.o nkeeprom.o nkbuttons.o nksleep.o
 
 all: blockgame.hex
 
