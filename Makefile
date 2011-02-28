@@ -1,4 +1,4 @@
-VPATH=src
+VPATH=src:include
 CC=avr-gcc
 LIBNERDKITS=../libnerdkits
 CFLAGS=-g -Os -Wall -mmcu=atmega168 -Iinclude -I$(LIBNERDKITS)
@@ -23,4 +23,11 @@ blockgame.ass:	blockgame
 
 .PHONY: clean
 clean:
-	-rm *.o blockgame blockgame.hex blockgame.ass
+	-rm *.o *.d blockgame blockgame.hex blockgame.ass
+
+-include $(OBJECTS:%.o=%.d)
+
+deps: $(OBJECTS:%.o=%.d)
+
+%.d: %.c
+	$(CC) $(CFLAGS) -MM $< > $@
