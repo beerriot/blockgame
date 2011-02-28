@@ -22,7 +22,11 @@ void nkrand_init() {
     // fire a conversion just to get the ADC warmed up
     ADCSRA |= (1<<ADSC);
 }
- 
+
+void nkrand_close() {
+    ADCSRA = 0;
+}
+
 uint8_t nkrand_next_bit() {
     // Lowest bit from ADC is the one most likely to change due to minute
     // variations in temperature as measured by LM37 and noise in power
@@ -53,6 +57,8 @@ uint16_t nkrand_seed() {
     uint16_t seed = 0;
     int8_t i;
  
+    nkrand_init();
+
     // 'seed' is the value we are going to generate.
     // Starting with zeros in all 16 bits of the 16-bit unsigned integer,
     // we XOR the bits one by one with a highly volatile bit value from ADC,
@@ -61,5 +67,8 @@ uint16_t nkrand_seed() {
         // XOR the seed with the random bit from ADC shifted
         seed ^= (nkrand_next_bit() << (i%16));
     }
+
+    nkrand_close();
+
     return seed;
 }

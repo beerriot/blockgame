@@ -34,7 +34,6 @@ int main() {
     nklcd_init();
     nkbuttons_init();
     nktimer_init(60);
-    nkrand_init();
     srand(nkrand_seed());
     bghighscore_init();
     sei(); //enable interrupts
