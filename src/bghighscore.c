@@ -18,7 +18,7 @@
 
 #include "bghighscore.h"
 
-struct bghighscore highscores[HIGH_SCORES];
+bghighscore_t highscores[HIGH_SCORES];
 
 void bghighscore_init() {
     if (!bghighscore_read()) {
@@ -30,7 +30,7 @@ void bghighscore_init() {
 uint8_t bghighscore_checksum() {
     uint8_t i, x = 0;
     unsigned char* hs = (unsigned char*)&highscores;
-    for (i = 0; i < HIGH_SCORES*sizeof(struct bghighscore); i++)
+    for (i = 0; i < HIGH_SCORES*sizeof(bghighscore_t); i++)
         x ^= *(hs+i);
     return x;
 }
@@ -40,9 +40,9 @@ uint8_t bghighscore_read() {
     cli(); // disable interrupts
     nkeeprom_read_bytes((unsigned char*)&highscores,
                         0,
-                        HIGH_SCORES*sizeof(struct bghighscore));
+                        HIGH_SCORES*sizeof(bghighscore_t));
     nkeeprom_read_bytes(&x,
-                        HIGH_SCORES*sizeof(struct bghighscore),
+                        HIGH_SCORES*sizeof(bghighscore_t),
                         1);
     sei();
     for (s = 0; s < HIGH_SCORES; s++)
@@ -68,9 +68,9 @@ void bghighscore_write() {
     x = bghighscore_checksum();
     nkeeprom_write_bytes((unsigned char*)&highscores,
                          0,
-                         HIGH_SCORES*sizeof(struct bghighscore));
+                         HIGH_SCORES*sizeof(bghighscore_t));
     nkeeprom_write_bytes((unsigned char*)&x,
-                         HIGH_SCORES*sizeof(struct bghighscore),
+                         HIGH_SCORES*sizeof(bghighscore_t),
                          1);
     sei();
 }
@@ -131,7 +131,7 @@ int bghighscore_move_cursor(uint8_t buttons, int* i) {
 
 void bghighscore_new(int rank, uint16_t score) {
     int i=0, c;
-    struct nkbuttons button_state;
+    nkbuttons_t button_state;
     uint8_t pressed_buttons;
     nkbuttons_clear(&button_state);
     for (c = 0; c < INITIALS; c++)

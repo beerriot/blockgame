@@ -19,12 +19,12 @@
 #include "bggame.h"
 #include "bghighscore.h"
 
-char bggame_random_piece(struct game game) {
+char bggame_random_piece(game_t game) {
     return 'a'+(rand() % game.variety);
 }
 
 // initialize the board
-void bggame_board_init(struct game *game) {
+void bggame_board_init(game_t *game) {
     int r,c;
     for (r = 0; r < game->height; r++)
         for (c = 0; c < game->width; c++)
@@ -32,9 +32,9 @@ void bggame_board_init(struct game *game) {
 }
 
 // handle any directional button pushes
-void bggame_move_cursor(struct game game,
+void bggame_move_cursor(game_t game,
                         uint8_t buttons_pushed,
-                        struct point* cursor) {
+                        point_t* cursor) {
     if (buttons_pushed & B_UP)
         cursor->row--;
     if (buttons_pushed & B_DOWN)
@@ -65,9 +65,9 @@ uint8_t bggame_are_neighbor_rowcols(int rc1, int rc2, int max) {
 }
 
 // return true if the given points are neighbors
-uint8_t bggame_are_neighbors(struct game game,
-                             struct point p1,
-                             struct point p2) {
+uint8_t bggame_are_neighbors(game_t game,
+                             point_t p1,
+                             point_t p2) {
     if (p1.row == p2.row)
         return bggame_are_neighbor_rowcols(p1.column, p2.column, game.width);
     else if (p1.column == p2.column)
@@ -75,15 +75,15 @@ uint8_t bggame_are_neighbors(struct game game,
     return 0;
 }
 
-void bggame_invalidate_selection(struct point* selection) {
+void bggame_invalidate_selection(point_t* selection) {
     selection->meta = 0;
 }
 
-uint8_t bggame_selection_is_active(struct point selection) {
+uint8_t bggame_selection_is_active(point_t selection) {
     return selection.meta != 0;
 }
 
-void bggame_clear_selection(struct game *game, struct point* selection) {
+void bggame_clear_selection(game_t *game, point_t* selection) {
     if (bggame_selection_is_active(*selection))
         game->board[selection->row][selection->column] |= 0x20;
     lcd_goto_position(selection->row, selection->column);
@@ -91,9 +91,9 @@ void bggame_clear_selection(struct game *game, struct point* selection) {
     bggame_invalidate_selection(selection);
 }
 
-void bggame_set_selection(struct game *game,
-                          struct point* selection,
-                          struct point cursor) {
+void bggame_set_selection(game_t *game,
+                          point_t* selection,
+                          point_t cursor) {
     selection->row = cursor.row;
     selection->column = cursor.column;
     selection->meta = 1;
@@ -103,13 +103,13 @@ void bggame_set_selection(struct game *game,
 }
 
 // return the index to the row to the "right" of the given row
-int bggame_next_row(struct game game, int r) {
+int bggame_next_row(game_t game, int r) {
     if (++r > (game.height-1)) return 0;
     return r;
 }
 
 // return the index to the column "below" the given column
-int bggame_next_column(struct game game, int c) {
+int bggame_next_column(game_t game, int c) {
     if (++c > (game.width-1)) return 0;
     return c;
 }
@@ -120,7 +120,7 @@ int bggame_match(char a, char b, char c) {
 }
 
 // mark all sets on the board (as capital letters)
-int bggame_mark_sets(struct game *game) {
+int bggame_mark_sets(game_t *game) {
     int r, nr, nnr, c, nc, nnc, found=0;
     for(r=0, nr=bggame_next_row(*game, r), nnr=bggame_next_row(*game, nr);
         r < game->height;
@@ -152,7 +152,7 @@ int bggame_mark_sets(struct game *game) {
 }
 
 // remove all sets on the board (as previously marked)
-uint8_t bggame_remove_sets(struct game *game) {
+uint8_t bggame_remove_sets(game_t *game) {
     int r, c;
     uint8_t removed = 0;
     for(r=0; r < game->height; r++) {
@@ -167,17 +167,17 @@ uint8_t bggame_remove_sets(struct game *game) {
 }
 
 // move the piece at a to position b, and the piece at b to positiona
-void bggame_swap_pieces(struct game *game, struct point a, struct point b) {
+void bggame_swap_pieces(game_t *game, point_t a, point_t b) {
     char p = game->board[a.row][a.column];
     game->board[a.row][a.column] = game->board[b.row][b.column];
     game->board[b.row][b.column] = p;
 }
 
 // handle a select button push
-uint8_t bggame_select(struct game *game,
+uint8_t bggame_select(game_t *game,
                       uint8_t buttons_pushed,
-                      struct point cursor,
-                      struct point *selection) {
+                      point_t cursor,
+                      point_t *selection) {
     if (buttons_pushed & B_SELECT) {
         if (bggame_selection_is_active(*selection)) {
             if (bggame_are_neighbors(*game, *selection, cursor)) {
@@ -199,7 +199,7 @@ uint8_t bggame_select(struct game *game,
     return 0;
 }
 
-void bggame_write_board(struct game game) {
+void bggame_write_board(game_t game) {
     int r, c;
     for (r=0; r < game.height; r++) {
         lcd_goto_position(r, 0);
@@ -222,7 +222,7 @@ void bggame_shift(char* row, int width, int start) {
         row[start] = row[start+1];
 }
 
-int bggame_fill_spaces_row(struct game game, char* row) {
+int bggame_fill_spaces_row(game_t game, char* row) {
     int first_space = bggame_first_space(row, game.width);
     if (first_space < game.width) {
         bggame_shift(row, game.width, first_space);
@@ -232,7 +232,7 @@ int bggame_fill_spaces_row(struct game game, char* row) {
         return 0;
 }
 
-int bggame_fill_spaces(struct game *game) {
+int bggame_fill_spaces(game_t *game) {
     int r, spaces = 0;
     for(r = 0; r < game->height; r++) {
         spaces |= bggame_fill_spaces_row(*game, game->board[r]);
@@ -240,7 +240,7 @@ int bggame_fill_spaces(struct game *game) {
     return spaces;
 }
 
-void bggame_animate_space_fill(struct game *game) {
+void bggame_animate_space_fill(game_t *game) {
     int spaces = 1, move = 0;
     while(spaces) {
         if (nktimer_animate()) {
@@ -254,7 +254,7 @@ void bggame_animate_space_fill(struct game *game) {
     }
 }
 
-void bggame_animate_clear_sets(struct game *game) {
+void bggame_animate_clear_sets(game_t *game) {
     uint8_t combos = 1;
     do {
         game->score += (combos * bggame_remove_sets(game));
@@ -264,14 +264,14 @@ void bggame_animate_clear_sets(struct game *game) {
     } while (bggame_mark_sets(game));
 }
 
-void bggame_clear_marks(struct game *game) {
+void bggame_clear_marks(game_t *game) {
     int r, c;
     for (r = 0; r < game->height; r++)
         for (c = 0; c < game->width; c++)
             game->board[r][c] |= 0x20;
 }
 
-int8_t bggame_valid_move(struct game game, struct point a, struct point b) {
+int8_t bggame_valid_move(game_t game, point_t a, point_t b) {
     int8_t valid = 0;
     bggame_swap_pieces(&game, a, b);
     if (bggame_mark_sets(&game)) {
@@ -282,8 +282,8 @@ int8_t bggame_valid_move(struct game game, struct point a, struct point b) {
     return valid;
 }
 
-int8_t bggame_valid_move_exists(struct game game) {
-    struct point check, right, below;
+int8_t bggame_valid_move_exists(game_t game) {
+    point_t check, right, below;
     int8_t valid = 0;
     for (check.row = 0, right.row = 0, below.row = 1;
          check.row < game.height;
@@ -301,15 +301,15 @@ int8_t bggame_valid_move_exists(struct game game) {
     return valid;
 }
 
-void bggame_play(struct game *game) {
+void bggame_play(game_t *game) {
     // row and column of the cursor
-    struct point cursor;
+    point_t cursor;
     // read state
-    struct nkbuttons button_state;
+    nkbuttons_t button_state;
     // latest new presses
     uint8_t pressed_buttons;
     // selection state
-    struct point selection;
+    point_t selection;
     // idle/sleep timer
     uint16_t idle = 0;
 

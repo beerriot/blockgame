@@ -15,7 +15,7 @@
 #define B_SELECT_INT (1<<PCINT13)
 
 // living state for the button reader
-struct nkbuttons {
+typedef struct {
     // the stable state (repeated agreeing reads) of the buttons
     uint8_t stable;
     // the most recent read of the buttons
@@ -25,12 +25,12 @@ struct nkbuttons {
     // whether or not key triggers are currently repeats
     // (smaller delay between firings after first repeat)
     uint8_t is_repeat;
-};
+} nkbuttons_t;
 
 void nkbuttons_init();
 void nkbuttons_enable_interrupts();
 void nkbuttons_disable_interrupts();
-uint8_t nkbuttons_read(struct nkbuttons* state);
-void nkbuttons_clear(struct nkbuttons* state);
+uint8_t nkbuttons_read(nkbuttons_t* state);
+void nkbuttons_clear(nkbuttons_t* state);
 
 #endif

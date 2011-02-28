@@ -22,7 +22,7 @@
 #include "bghighscore.h"
 
 int main() {
-    struct game game;
+    game_t game;
     // idle/sleep timer
     uint8_t idle = 0;
 

@@ -57,7 +57,7 @@ uint8_t nktimer_animate() {
 }
 
 void nktimer_simple_delay(int clicks) {
-    struct nkbuttons button_state;
+    nkbuttons_t button_state;
     nkbuttons_clear(&button_state);
 
     while (clicks > 0) {

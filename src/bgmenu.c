@@ -37,11 +37,11 @@ void bgmenu_write_prompt(int row, int val) {
     lcd_write_int16(val);
 }
 
-uint8_t bgmenu_display(struct game *game) {
+uint8_t bgmenu_display(game_t *game) {
     int ready = 0, prompt = 0, inactivity = 0;
     uint8_t pressed_buttons;
     int *field, min, max;
-    struct nkbuttons button_state;
+    nkbuttons_t button_state;
     nkbuttons_clear(&button_state);
     nklcd_stop_blinking();
     lcd_clear_and_home();

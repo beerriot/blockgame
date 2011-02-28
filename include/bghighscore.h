@@ -6,12 +6,12 @@
 #define INITIALS 3
 
 // the high score table
-struct bghighscore {
+typedef struct {
     // initials of the player that made the score
     char initials[INITIALS];
     // the player's score
     uint16_t score;
-};
+} bghighscore_t;
 
 void bghighscore_init();
 uint8_t bghighscore_checksum();
