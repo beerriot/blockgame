@@ -21,9 +21,10 @@ blockgame: $(OBJECTS) blockgame.c
 blockgame.ass:	blockgame
 	avr-objdump -S -d blockgame > blockgame.ass
 
-.PHONY: clean
+.PHONY: clean test
 clean:
 	-rm *.o *.d blockgame blockgame.hex blockgame.ass
+	$(MAKE) -C test clean
 
 -include $(OBJECTS:%.o=%.d)
 
@@ -31,3 +32,6 @@ deps: $(OBJECTS:%.o=%.d)
 
 %.d: %.c
 	$(CC) $(CFLAGS) -MM $< > $@
+
+test:
+	$(MAKE) -C test test
