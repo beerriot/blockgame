@@ -12,7 +12,7 @@
 #define B_DOWN_INT   (1<<PCINT9)
 #define B_UP_INT     (1<<PCINT10)
 #define B_RIGHT_INT  (1<<PCINT11)
-#define B_SELECT_INT (1<<PCINT13)
+#define B_SELECT_INT (1<<PCINT12)
 
 // living state for the button reader
 typedef struct {
