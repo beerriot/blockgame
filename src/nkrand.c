@@ -5,6 +5,7 @@
 
 // using the ADC to produce random numbers
 
+#include <inttypes.h>
 #include <avr/pgmspace.h>
 
 #include "nkrand.h"

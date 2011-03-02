@@ -5,6 +5,7 @@
 
 // utilities for reading and writing the EEPROM
 
+#include <inttypes.h>
 #include <avr/pgmspace.h>
 
 #include "nkeeprom.h"

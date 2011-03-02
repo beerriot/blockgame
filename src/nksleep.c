@@ -5,6 +5,7 @@
 
 // utilities for reducing power consumption
 
+#include <inttypes.h>
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 #include <avr/sleep.h>

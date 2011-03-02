@@ -5,6 +5,7 @@
 
 // utilities for reading button states
 
+#include <inttypes.h>
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 
