@@ -116,7 +116,7 @@ int bggame_next_column(game_t game, int c) {
 
 // determine if a, b, and c are the same piece
 int bggame_match(char a, char b, char c) {
-    return ((0x0F & b) == (0x0F & a)) && ((0x0F & b) == (0x0F & c));
+    return ((0x1F & b) == (0x1F & a)) && ((0x1F & b) == (0x1F & c));
 }
 
 // mark all sets on the board (as capital letters)
