@@ -80,7 +80,7 @@ void bggame_invalidate_selection(point_t *selection) {
 }
 
 uint8_t bggame_selection_is_active(point_t selection) {
-    return selection.meta != 0;
+    return selection.meta & PM_SELECTED;
 }
 
 void bggame_clear_selection(game_t *game, point_t *selection) {
@@ -96,7 +96,7 @@ void bggame_set_selection(game_t *game,
                           point_t cursor) {
     selection->row = cursor.row;
     selection->column = cursor.column;
-    selection->meta = 1;
+    selection->meta |= PM_SELECTED;
     game->board[selection->row][selection->column] &= ~0x20;
     lcd_goto_position(selection->row, selection->column);
     lcd_write_data(game->board[selection->row][selection->column]);

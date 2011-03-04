@@ -25,6 +25,9 @@ typedef struct {
     uint8_t meta;
 } point_t;
 
+// metadata for point.meta bitfield
+#define PM_SELECTED 1
+
 char bggame_random_piece(game_t game);
 void bggame_board_init(game_t *game);
 void bggame_move_cursor(game_t game,
