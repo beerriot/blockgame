@@ -24,42 +24,42 @@
 #define P_START   3
 #define P_LAST    3
 
-void bgmenu_forb(int row, uint8_t focus) {
+void bgmenu_forb(int8_t row, uint8_t focus) {
     lcd_goto_position(row, 10);
     lcd_write_data(focus ? 0x7e : ' ');
     lcd_goto_position(row, 16);
     lcd_write_data(focus ? 0x7f : ' ');
 }
-void bgmenu_focus(int row) {
+void bgmenu_focus(int8_t row) {
     bgmenu_forb(row, 1);
 }
-void bgmenu_blur(int row) {
+void bgmenu_blur(int8_t row) {
     bgmenu_forb(row, 0);
 }
 
-void bgmenu_write_prompt(int row, int val) {
+void bgmenu_write_prompt(int8_t row, int8_t val) {
     lcd_goto_position(row, 12);
     if (val < 10)
         lcd_write_data(' ');
     lcd_write_int16(val);
 }
 
-int bgmenu_previous_prompt(int current) {
+int8_t bgmenu_previous_prompt(int8_t current) {
     return bgmenu_refocus(current, (current == 0) ? P_LAST : current-1);
 }
 
-int bgmenu_next_prompt(int current) {
+int8_t bgmenu_next_prompt(int8_t current) {
     return bgmenu_refocus(current, (current == P_LAST) ? 0 : current+1);
 }
 
-int bgmenu_refocus(int blur, int focus) {
+int8_t bgmenu_refocus(int8_t blur, int8_t focus) {
     bgmenu_blur(blur);
     bgmenu_focus(focus);
     return focus;
 }
 
-int bgmenu_field_and_limits(int prompt, game_t *game,
-                            int **field, int *min, int *max) {
+int8_t bgmenu_field_and_limits(int8_t prompt, game_t *game,
+                               int8_t **field, int8_t *min, int8_t *max) {
     switch (prompt) {
     case P_WIDTH:
         *field = &game->width;
@@ -81,8 +81,8 @@ int bgmenu_field_and_limits(int prompt, game_t *game,
     }
 }
 
-void bgmenu_increase_prompt(int prompt, game_t *game) {
-    int *field, min, max;
+void bgmenu_increase_prompt(int8_t prompt, game_t *game) {
+    int8_t *field, min, max;
     if (bgmenu_field_and_limits(prompt, game, &field, &min, &max)) {
         if (*field < max)
             *field = *field+1;
@@ -90,8 +90,8 @@ void bgmenu_increase_prompt(int prompt, game_t *game) {
     }
 }
 
-void bgmenu_decrease_prompt(int prompt, game_t *game) {
-    int *field, min, max;
+void bgmenu_decrease_prompt(int8_t prompt, game_t *game) {
+    int8_t *field, min, max;
     if (bgmenu_field_and_limits(prompt, game, &field, &min, &max)) {
         if (*field > min)
             *field = *field-1;
@@ -100,7 +100,9 @@ void bgmenu_decrease_prompt(int prompt, game_t *game) {
 }
 
 uint8_t bgmenu_display(game_t *game) {
-    int ready = 0, prompt = 0, inactivity = 0;
+    uint8_t ready = 0;
+    int8_t prompt = 0;
+    int16_t inactivity = 0;
     uint8_t pressed_buttons;
     nkbuttons_t button_state;
     nkbuttons_clear(&button_state);

@@ -18,11 +18,11 @@ uint8_t bghighscore_checksum();
 uint8_t bghighscore_read();
 void bghighscore_clear();
 void bghighscore_write();
-void bghighscore_display_line(int rank, int lcd_line);
+void bghighscore_display_line(int8_t rank, int8_t lcd_line);
 void bghighscore_screen();
-void bghighscore_alter_initials(uint8_t buttons, int rank, int i);
-int bghighscore_move_cursor(uint8_t buttons, int *i);
-void bghighscore_new(int rank, uint16_t score);
+void bghighscore_alter_initials(uint8_t buttons, int8_t rank, int8_t i);
+uint8_t bghighscore_move_cursor(uint8_t buttons, int8_t *i);
+void bghighscore_new(int8_t rank, uint16_t score);
 void bghighscore_maybe(uint16_t score);
 
 #endif

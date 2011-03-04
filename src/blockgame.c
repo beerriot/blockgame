@@ -24,7 +24,7 @@
 int main() {
     game_t game;
     // idle/sleep timer
-    uint8_t idle = 0;
+    int8_t idle = 0;
 
     // the playing board
     game.width = MAX_WIDTH;

@@ -21,7 +21,7 @@ ISR(TIMER0_COMPA_vect) {
 }
 
 // configure the animation timer at boot
-void nktimer_init(int freq) {
+void nktimer_init(int8_t freq) {
     // Clear Timer on Compare Match of OCRA
     TCCR0A |= (1<<WGM01);
 
@@ -56,7 +56,7 @@ uint8_t nktimer_animate() {
     return 0;
 }
 
-void nktimer_simple_delay(int clicks) {
+void nktimer_simple_delay(int16_t clicks) {
     nkbuttons_t button_state;
     nkbuttons_clear(&button_state);
 

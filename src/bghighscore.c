@@ -54,7 +54,7 @@ uint8_t bghighscore_read() {
 }
 
 void bghighscore_clear() {
-    uint8_t s, c;
+    int8_t s, c;
     for (s = 0; s < HIGH_SCORES; s++) {
         for (c = 0; c < INITIALS; c++)
             highscores[s].initials[c] = 'a';
@@ -63,9 +63,8 @@ void bghighscore_clear() {
 }
 
 void bghighscore_write() {
-    uint8_t x;
+    uint8_t x = bghighscore_checksum();
     cli(); //disable interrupts
-    x = bghighscore_checksum();
     nkeeprom_write_bytes((unsigned char *)&highscores,
                          0,
                          HIGH_SCORES*sizeof(bghighscore_t));
@@ -75,8 +74,8 @@ void bghighscore_write() {
     sei();
 }
 
-void bghighscore_display_line(int rank, int lcd_line) {
-    int c;
+void bghighscore_display_line(int8_t rank, int8_t lcd_line) {
+    int8_t c;
     lcd_goto_position(lcd_line, 6);
     for (c = 0; c < INITIALS; c++)
         lcd_write_data(highscores[rank].initials[c]);
@@ -85,7 +84,7 @@ void bghighscore_display_line(int rank, int lcd_line) {
 }
 
 void bghighscore_screen() {
-    int s;
+    int8_t s;
     // game is over (no more moves)
     lcd_clear_and_home();
     nklcd_stop_blinking();
@@ -98,7 +97,7 @@ void bghighscore_screen() {
     nktimer_simple_delay(300);
 }
 
-void alter_highscore_initials(uint8_t buttons, int rank, int i) {
+void alter_highscore_initials(uint8_t buttons, int8_t rank, int8_t i) {
     if (buttons & B_UP) {
         if (highscores[rank].initials[i] < 'z')
             highscores[rank].initials[i]++;
@@ -112,7 +111,7 @@ void alter_highscore_initials(uint8_t buttons, int rank, int i) {
     }
 }
 
-int bghighscore_move_cursor(uint8_t buttons, int *i) {
+uint8_t bghighscore_move_cursor(uint8_t buttons, int8_t *i) {
     if (buttons & B_LEFT) {
         if (*i > 0)
             *i -= 1;
@@ -129,13 +128,13 @@ int bghighscore_move_cursor(uint8_t buttons, int *i) {
     return 0;
 }
 
-void bghighscore_new(int rank, uint16_t score) {
-    int i=0, c;
+void bghighscore_new(int8_t rank, uint16_t score) {
+    int8_t i;
     nkbuttons_t button_state;
     uint8_t pressed_buttons;
     nkbuttons_clear(&button_state);
-    for (c = 0; c < INITIALS; c++)
-        highscores[rank].initials[c] = 'a';
+    for (i = 0; i < INITIALS; i++)
+        highscores[rank].initials[i] = 'a';
     highscores[rank].score = score;
 
     lcd_clear_and_home();
@@ -144,6 +143,7 @@ void bghighscore_new(int rank, uint16_t score) {
     bghighscore_display_line(rank, 2);
     lcd_goto_position(2, 6);
     nklcd_start_blinking();
+    i = 0;
 
     while(1) {
         if (nktimer_animate()) {

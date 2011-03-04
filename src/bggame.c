@@ -25,7 +25,7 @@ char bggame_random_piece(game_t game) {
 
 // initialize the board
 void bggame_board_init(game_t *game) {
-    int r,c;
+    int8_t r,c;
     for (r = 0; r < game->height; r++)
         for (c = 0; c < game->width; c++)
             game->board[r][c] = ' ';
@@ -56,8 +56,8 @@ void bggame_move_cursor(game_t game,
 }
 
 // return true if the given columns/rows are neighbors
-uint8_t bggame_are_neighbor_rowcols(int rc1, int rc2, int max) {
-    int diff = rc1 - rc2;
+uint8_t bggame_are_neighbor_rowcols(int8_t rc1, int8_t rc2, int8_t max) {
+    int8_t diff = rc1 - rc2;
     return ((diff == 1) ||     // p1 is right-of/below p2
             (-diff == 1) ||    // p1 is left-of/above of p2
             (diff == max-1) || // p1 is far right/bottom, p2 is far left/top
@@ -103,25 +103,25 @@ void bggame_set_selection(game_t *game,
 }
 
 // return the index to the row to the "right" of the given row
-int bggame_next_row(game_t game, int r) {
+int8_t bggame_next_row(game_t game, int8_t r) {
     if (++r > (game.height-1)) return 0;
     return r;
 }
 
 // return the index to the column "below" the given column
-int bggame_next_column(game_t game, int c) {
+int8_t bggame_next_column(game_t game, int8_t c) {
     if (++c > (game.width-1)) return 0;
     return c;
 }
 
 // determine if a, b, and c are the same piece
-int bggame_match(char a, char b, char c) {
+uint8_t bggame_match(char a, char b, char c) {
     return ((0x1F & b) == (0x1F & a)) && ((0x1F & b) == (0x1F & c));
 }
 
 // mark all sets on the board (as capital letters)
-int bggame_mark_sets(game_t *game) {
-    int r, nr, nnr, c, nc, nnc, found=0;
+uint8_t bggame_mark_sets(game_t *game) {
+    int8_t r, nr, nnr, c, nc, nnc, found=0;
     for(r=0, nr=bggame_next_row(*game, r), nnr=bggame_next_row(*game, nr);
         r < game->height;
         r++, nr=bggame_next_row(*game, nr), nnr=bggame_next_row(*game, nnr)) {
@@ -153,7 +153,7 @@ int bggame_mark_sets(game_t *game) {
 
 // remove all sets on the board (as previously marked)
 uint8_t bggame_remove_sets(game_t *game) {
-    int r, c;
+    int8_t r, c;
     uint8_t removed = 0;
     for(r=0; r < game->height; r++) {
         for(c=0; c < game->width; c++) {
@@ -200,7 +200,7 @@ uint8_t bggame_select(game_t *game,
 }
 
 void bggame_write_board(game_t game) {
-    int r, c;
+    int8_t r, c;
     for (r=0; r < game.height; r++) {
         lcd_goto_position(r, 0);
         for (c=0; c < game.width; c++) {
@@ -209,21 +209,21 @@ void bggame_write_board(game_t game) {
     }
 }
 
-int bggame_first_space(char *row, int width) {
-    int c;
+int8_t bggame_first_space(char *row, int8_t width) {
+    int8_t c;
     for (c = 0; c < width; c++)
         if (row[c] == ' ')
             break;
     return c;
 }
 
-void bggame_shift(char *row, int width, int start) {
+void bggame_shift(char *row, int8_t width, int8_t start) {
     for (; start < (width-1); start++)
         row[start] = row[start+1];
 }
 
-int bggame_fill_spaces_row(game_t game, char *row) {
-    int first_space = bggame_first_space(row, game.width);
+uint8_t bggame_fill_spaces_row(game_t game, char *row) {
+    int8_t first_space = bggame_first_space(row, game.width);
     if (first_space < game.width) {
         bggame_shift(row, game.width, first_space);
         row[(game.width-1)] = bggame_random_piece(game);
@@ -232,7 +232,7 @@ int bggame_fill_spaces_row(game_t game, char *row) {
         return 0;
 }
 
-int bggame_fill_spaces(game_t *game) {
+uint8_t bggame_fill_spaces(game_t *game) {
     int r, spaces = 0;
     for(r = 0; r < game->height; r++) {
         spaces |= bggame_fill_spaces_row(*game, game->board[r]);
@@ -241,7 +241,7 @@ int bggame_fill_spaces(game_t *game) {
 }
 
 void bggame_animate_space_fill(game_t *game) {
-    int spaces = 1, move = 0;
+    uint8_t spaces = 1, move = 0;
     while(spaces) {
         if (nktimer_animate()) {
             if(move > 7) {
@@ -265,14 +265,14 @@ void bggame_animate_clear_sets(game_t *game) {
 }
 
 void bggame_clear_marks(game_t *game) {
-    int r, c;
+    int8_t r, c;
     for (r = 0; r < game->height; r++)
         for (c = 0; c < game->width; c++)
             game->board[r][c] |= 0x20;
 }
 
-int8_t bggame_valid_move(game_t game, point_t a, point_t b) {
-    int8_t valid = 0;
+uint8_t bggame_valid_move(game_t game, point_t a, point_t b) {
+    uint8_t valid = 0;
     bggame_swap_pieces(&game, a, b);
     if (bggame_mark_sets(&game)) {
         valid = 1;
@@ -282,9 +282,9 @@ int8_t bggame_valid_move(game_t game, point_t a, point_t b) {
     return valid;
 }
 
-int8_t bggame_valid_move_exists(game_t game) {
+uint8_t bggame_valid_move_exists(game_t game) {
     point_t check, right, below;
-    int8_t valid = 0;
+    uint8_t valid = 0;
     for (check.row = 0, right.row = 0, below.row = 1;
          check.row < game.height;
          check.row++, right.row++,
@@ -311,7 +311,7 @@ void bggame_play(game_t *game) {
     // selection state
     point_t selection;
     // idle/sleep timer
-    uint16_t idle = 0;
+    int16_t idle = 0;
 
     nkbuttons_clear(&button_state);
     cursor.row = 0;
@@ -324,7 +324,7 @@ void bggame_play(game_t *game) {
     game->score = 0; // no points for tiles removed before play starts
     lcd_goto_position(cursor.row, cursor.column);
     nklcd_start_blinking();
-    int8_t move_exists = bggame_valid_move_exists(*game);
+    uint8_t move_exists = bggame_valid_move_exists(*game);
     // now let play begin
     while(move_exists) {
         if (nktimer_animate()) {
