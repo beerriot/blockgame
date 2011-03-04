@@ -9,25 +9,25 @@ http://blog.beerriot.com/2011/02/14/nerdkit-gaming/
 
 Play begins with a board of random tiles:
 
-  abcdefg
-  cabfgde
-  gbacedf
+:  abcdefg
+:  cabfgde
+:  gbacedf
 
 The player makes a move by choosing two adjacent tiles to swap, such
 that a line of three matching tiles are made.  For example, swapping
 the 'a' and 'b' in the second row of the example above creates a line
 of 'b':
 
-  abcdefg
-  cbafgde
-  gbacedf
+:  abcdefg
+:  cbafgde
+:  gbacedf
 
 The 'b' tiles are then removed from the board, and new random tiles
 added to the right side:
 
-  acdefga
-  cafgded
-  gacedfb
+:  acdefga
+:  cafgded
+:  gacedfb
 
 Play continues until it is not possible to make a match with just one
 swap.
