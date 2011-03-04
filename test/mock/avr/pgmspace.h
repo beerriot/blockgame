@@ -35,7 +35,7 @@ uint8_t SMCR;
 #define PCINT9 0x01
 #define PCINT10 0x02
 #define PCINT11 0x03
-#define PCINT13 0x04
+#define PCINT12 0x04
 
 #define PCIE1 0x01
 #define PINC 0x02
