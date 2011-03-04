@@ -113,18 +113,23 @@ void alter_highscore_initials(uint8_t buttons, int8_t rank, int8_t i) {
 
 uint8_t bghighscore_move_cursor(uint8_t buttons, int8_t *i) {
     if (buttons & B_LEFT) {
+        // left button always moves cursor left
         if (*i > 0)
             *i -= 1;
         else
-            *i = 2;
+            *i = INITIALS-1;
     } else if (buttons & (B_RIGHT | B_SELECT)) {
-        if (*i < 2)
+        // right button or select button moves cursor right ...
+        if (*i < INITIALS-1)
             *i += 1;
         else if (buttons & B_SELECT)
+            // unless it's the last letter,
+            // in which case it confirms the initials entered
             return 1;
         else
             *i = 0;
     }
+    // initials have not yet been confirmed
     return 0;
 }
 
