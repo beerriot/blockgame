@@ -3,3 +3,6 @@ created by Humberto Evans.
 
 The ADC-random-generation code was originally created by the forum
 member "wayward" at http://www.nerdkits.com/forum/thread/13/
+
+The EEPROM-modifying code (nkeeprom.c) is based on example code in
+the ATmega48/88/168 manual, section 7 "AVR Memories".

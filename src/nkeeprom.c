@@ -2,6 +2,8 @@
 // for NerdKits with ATmega168
 // copyright 2011 Bryan Fink
 // license: see LICENSE.txt
+// notice: this file (nkeeprom.c) is based on example code in the
+//         ATmega48/88/168 manual, section 7 "AVR Memories"
 
 // utilities for reading and writing the EEPROM
 
