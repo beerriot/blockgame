@@ -87,3 +87,38 @@ To compile and program the NerdKit, connect the programmer, and type
 of where the NerdKit libraries should be located).
 
 To compile without programming, use 'make blockgame.hex'.
+
+* Extra Features
+
+** Scoreboard
+
+The game features a scoreboard stored in the EEPROM.  It's a very
+simple format: three bytes of initial, two bytes of score, repeat
+twice more, then add a byte of checksum.  Sixteen bytes total.
+Visually:
+
+: IIISS
+: IIISS
+: IIISS
+: C
+
+The two bytes of score are the high byte, then the low byte of a
+16-bit unsigned integer.  The checksum is simply the bitwise XOR of
+the other 15 bytes.
+
+** Sleep
+
+The game will also put itself to sleep after a period of inactivity
+(no button presses).  The idea is to save power by turning off the
+display and shutting down most of the MCU.  It will automatically wake
+up and resume where it left off when a button is pressed.
+
+The two sleep points are: a minute of sitting on the game screen, and
+4 transitions back and forth between the start menu and the highscore
+table.  (Another new feature is the "screen saver" mode of the start
+menu, which flips to the highscore table after several seconds.)
+
+** Testing
+
+There are also a couple of tests, with room for more.  If you run
+'make test' or look in the test/ directory, you'll find them.
